@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Form</title>
+    <!-- Include Bootstrap CSS for responsiveness -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Include custom CSS for centering the form -->
+<style>
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+</style>
+
+
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col col-md-12 col-lg">
+                <div class="card">
+                    <div class="card-header text-center">
+                        Login
+                    </div>
+                    <div class="card-body">
+                        
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="form-group" >
+                                <label for="username">Username</label>
+                                <input type="text" class="form-control" id="staffname" placeholder="Enter username" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="password">Password</label>
+                                <input type="password" class="form-control" id="password" placeholder="Password" required>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                            <br>
+                            {% if messages %}
+                            <ul style="color: red;">
+                                {% for message in messages %}
+                                    <li {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
