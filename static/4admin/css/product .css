@@ -1,0 +1,32 @@
+.table-responsive {
+    width: 100%;
+    overflow-x: auto; /* This ensures that the table can be scrolled horizontally if it exceeds the container width */
+    max-width: 100%; /* Ensure the table-responsive container does not exceed its parent's width */
+}
+
+.tab {
+    border-color: dimgrey;
+    border-width: 5px;
+}
+
+table {
+    width: 100%;
+    table-layout: fixed; /* This ensures that the table layout is not affected by the content */
+    word-wrap: break-word; /* This ensures that long words or URLs do not break out of the table cell */
+}
+
+.table th, .table td {
+    padding: 10px;
+    word-wrap: break-word; /* This ensures that long words or URLs do not break out of the table cell */
+    overflow-wrap: break-word; /* This ensures that long words or URLs do not break out of the table cell */
+}
+
+.table th, .table td {
+    border-width: 2px;
+    border-color: dimgrey;
+}
+
+.table thead th {
+    border-width: 3px;
+    border-color: dimgrey;
+}

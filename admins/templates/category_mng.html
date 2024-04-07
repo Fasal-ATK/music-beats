@@ -1,0 +1,63 @@
+{% extends 'sidebar.html' %}\
+{% load static %}
+{% block head %} 
+
+<title>Categogy manager</title> 
+
+<link rel="stylesheet" href="{% static '4admin/css/category_manager.css' %}">
+
+{% endblock %}
+
+
+
+{% block content %}
+<div class="container">
+    <div class="top-right">
+        <button id="addBtn">Add Category</button>
+    </div>
+    <h2>Category Table</h2>
+    <table id="categoryTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Categories will be added here dynamically -->
+            <tr>
+                <td>1</td>
+                <td>Product 1</td>
+                <td>hau hufasdf</td>
+                <td>
+                    <button>Edit</button>
+                    <button>Delete</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div id="addCategoryModal" class="modal">
+    <div class="modal-content card">
+        <span class="close">&times;</span>
+        <form id="addCategoryForm">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
+            <label for="description">Description:</label>
+            <input type="text" id="description" name="description" required>
+            <button type="submit">Add</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+{% block script %}
+<script src="{% static '4admin/js/category_manager.js' %}"></script>
+{% endblock %}
+           

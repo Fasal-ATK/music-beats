@@ -9,7 +9,6 @@ from django.views.decorators.cache import never_cache
 
 # Create your views here.
 @login_required(login_url='ulogin')
-
 def UserHome(request):
     return render(request,'index.html')
 
@@ -23,9 +22,9 @@ def Signup(request):
         email = request.POST.get('email')
         pass1 = request.POST.get('pass')
         pass2 = request.POST.get('re_pass')
-        # if len(pass1)<8:
-        #     messages.error(request,"password need to be 8 or more charecters")
-        if len(pass1) > 25:
+        if len(pass1)<8:
+            messages.error(request,"password need to be 8 or more charecters")
+        elif len(pass1) > 25:
             messages.error(request,"password is too big")
         elif pass1 != pass2:
             messages.error(request,"password does  not match")

@@ -1,0 +1,43 @@
+
+{% extends 'sidebar.html' %}
+
+{% load static %}
+
+{% block head %} 
+<title>  dashboard  </title> 
+{% endblock %}
+
+ 
+    <!--Container Main start-->
+
+        {% block content %}
+
+        <!-- Dashboard HTML code goes here -->
+           
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card" style="border-color: #007bff; background-color: #f8f9fa;">
+                        <div class="card-body" style="height: 500px;"> <!-- Adjust height as needed -->
+                            <h5 class="card-title">Sales Data</h5>
+                            <canvas id="salesChart" style="width: 100%; height: 100%;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+   
+        {% endblock %}
+         <!--Container Main End-->
+ 
+
+        {% block script %}
+
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{% static '4admin/js/dash.js' %}"></script>
+         {% endblock %}
+
+</body>
+</html>
