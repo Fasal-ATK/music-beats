@@ -1,38 +1,65 @@
-// script.js
-document.addEventListener('DOMContentLoaded', function() {
-    const addBtn = document.getElementById('addBtn');
-    const modal = document.getElementById('addCategoryModal');
-    const closeModal = document.getElementsByClassName('close')[0];
-    const addCategoryForm = document.getElementById('addCategoryForm');
-    const categoryTable = document.getElementById('categoryTable');
+document.addEventListener("DOMContentLoaded", function() {
+    var addBtn = document.getElementById('addBtn');
+    var modal = document.getElementById('addCategoryModal');
+    var closeModal = document.querySelector("#addCategoryModal .close");
+    var editModal = document.getElementById('editCategoryModal');
+    var closeEditModal = document.querySelector("#editCategoryModal .close");
 
+    // Show add category modal when add button is clicked
     addBtn.onclick = function() {
         modal.style.display = "block";
-    }
+    };
 
+    // Hide add category modal when close button is clicked
     closeModal.onclick = function() {
         modal.style.display = "none";
-    }
+    };
 
+    // Hide add category modal when user clicks outside of it
     window.onclick = function(event) {
         if (event.target == modal) {
             modal.style.display = "none";
         }
-    }
+    };
 
-    addCategoryForm.onsubmit = function(e) {
-        e.preventDefault();
-        const name = document.getElementById('name').value;
-        const description = document.getElementById('description').value;
+    // Show edit category modal when edit button is clicked
+    var editButtons = document.querySelectorAll('.editBtn');
+    editButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            editModal.style.display = "block";
+            // Fetch category details and populate the form fields for editing
+            var categoryId = this.closest('tr').querySelector('td:first-child').innerText;
+            var categoryName = this.closest('tr').querySelector('td:nth-child(2)').innerText;
+            var categoryDescription = this.closest('tr').querySelector('td:nth-child(3)').innerText;
+            document.getElementById('editCategoryId').value = categoryId;
+            document.getElementById('editName').value = categoryName;
+            document.getElementById('editDescription').value = categoryDescription;
+        });
+    });
 
-        // Here you would typically send the data to a server
-        // For this example, we'll just add it to the table
-        const newRow = categoryTable.insertRow(-1);
-        newRow.insertCell(0).innerHTML = 'New ID'; // Replace 'New ID' with actual ID
-        newRow.insertCell(1).innerHTML = name;
-        newRow.insertCell(2).innerHTML = description;
-        newRow.insertCell(3).innerHTML = '<button>Edit</button> <button>Delete</button>';
+    // Hide edit category modal when close button is clicked
+    closeEditModal.onclick = function() {
+        editModal.style.display = "none";
+    };
 
-        modal.style.display = "none";
-    }
+    // Hide edit category modal when user clicks outside of it
+    window.onclick = function(event) {
+        if (event.target == editModal) {
+            editModal.style.display = "none";
+        }
+    };
+
+    // Handle form submission for adding category
+    var addCategoryForm = document.getElementById('addCategoryForm');
+    addCategoryForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        // Submit form via AJAX or fetch API
+    });
+
+    // Handle form submission for editing category
+    var editCategoryForm = document.getElementById('editCategoryForm');
+    editCategoryForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        // Submit form via AJAX or fetch API
+    });
 });

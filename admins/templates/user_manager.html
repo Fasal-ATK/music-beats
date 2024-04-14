@@ -35,7 +35,7 @@
                         <table class="table table-striped table-hover table-bordered">
                             <thead>
                                 <tr>
-                                    <th>#</th>
+                                    <th>id</th>
                                     <th>User Name<i class="fa fa-sort"></i></th>
                                     <th>email</th>
                                     <th>Phone<i class="fa fa-sort"></i></th>
@@ -49,16 +49,15 @@
                                     <td>{{i.username}}</td>
                                     <td>{{i.email}}</td>
                                     <td>{{i.phone}}</td>
-                
                                     
                                     <td>
-                                
-                                    
-                                     <a href="{% url 'block' i.id %}" class="btn btn-primary"> 
 
-                                        {% if i.is_blocked %}Unblock 
-                                         {% else %}Block</a>
+                                    {% if i.is_blocked %}
+                                        <a class="btn btn-success" href="{% url 'block' i.id %}">Unblock</a>
+                                    {% else %}
+                                        <a class="btn btn-danger" href="{% url 'block' i.id %}">Block</a>
                                     {% endif %}
+
                                     </td>
                                     
                                 </tr> 
@@ -88,6 +87,7 @@
          <!--Container Main Ends -->
 
          {% block script %}
+   
          {% endblock %}
 
 </body>

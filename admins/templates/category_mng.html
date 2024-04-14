@@ -1,19 +1,18 @@
-{% extends 'sidebar.html' %}\
+{% extends 'sidebar.html' %}
 {% load static %}
-{% block head %} 
 
-<title>Categogy manager</title> 
+    {% block head %} 
 
-<link rel="stylesheet" href="{% static '4admin/css/category_manager.css' %}">
+    <title>Category Manager</title> 
+    <link rel="stylesheet" href="{% static '4admin/css/category_manager.css' %}">
 
-{% endblock %}
+    {% endblock %}
 
-
-
-{% block content %}
+    {% block content %}
 <div class="container">
     <div class="top-right">
-        <button id="addBtn">Add Category</button>
+        <button class="btn btn-dark" id="addBtn">Add Category</button>
+        </form>
     </div>
     <h2>Category Table</h2>
     <table id="categoryTable">
@@ -22,42 +21,149 @@
                 <th>ID</th>
                 <th>Name</th>
                 <th>Description</th>
+                <th>Status</th> 
                 <th>Action</th>
             </tr>
         </thead>
         <tbody>
             <!-- Categories will be added here dynamically -->
+            {% for i in categories %}
             <tr>
-                <td>1</td>
-                <td>Product 1</td>
-                <td>hau hufasdf</td>
+                <td>{{i.id}}</td>
+                <td>{{i.name}}</td>
+                <td>{{i.description}}</td>
                 <td>
-                    <button>Edit</button>
-                    <button>Delete</button>
+                    {% if i.is_listed %}
+                        <span style="color: green;">Listed</span>
+                    {% else %}
+                        <span style="color: red;">Unlisted</span>
+                    {% endif %}
+                </td>
+                
+                <td> 
+                    <a class="btn btn-primary editBtn">Edit</a>
+                    {% if i.is_listed %}
+                    <a class="btn btn-danger" href="{% url 'list-category' i.id %}">Unlist</a>
+                    {% else %}
+                    <a class="btn btn-success" href="{% url 'list-category' i.id %}">List</a>
+                    {% endif %}
                 </td>
             </tr>
+            {% endfor %}
         </tbody>
     </table>
 </div>
 
+<!-- Modal for adding category -->
 <div id="addCategoryModal" class="modal">
-    <div class="modal-content card">
+    <div class="modal-content card add-modal">
         <span class="close">&times;</span>
-        <form id="addCategoryForm">
-            <label for="name">Name:</label>
-            <input type="text" id="name" name="name" required>
-            <label for="description">Description:</label>
-            <input type="text" id="description" name="description" required>
-            <button type="submit">Add</button>
+        <form method="POST" id="addCategoryForm" action="{% url 'add-category' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_name">Name:</label>
+                <input type="text" class="form-control" id="id_name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="id_description">Description:</label>
+                <input type="text" class="form-control" id="id_description" name="description" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add</button>
         </form>
     </div>
 </div>
-{% endblock %}
 
 
+<!-- Edit Modal -->
+<div id="editCategoryModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <form id="editCategoryForm" method="post" action="{% url 'edit-category' %}">
+            {% csrf_token %}
+            <input type="hidden" id="editCategoryId" name="id">
+            <label for="editName">Name:</label>
+            <input type="text" id="editName" name="name" required>
+            <label for="editDescription">Description:</label>
+            <input type="text" id="editDescription" name="description" required>
+            <button type="submit">Save Changes</button>
+        </form>
+    </div>
+</div>
 
 
-{% block script %}
-<script src="{% static '4admin/js/category_manager.js' %}"></script>
-{% endblock %}
-           
+    {% endblock %}
+
+    {% block script %}
+<script>
+    // Get the modal element
+    var modal = document.getElementById("addCategoryModal");
+
+    // Get the button that opens the modal
+    var btn = document.getElementById("addBtn");
+
+    // Get the <span> element that closes the modal
+    var span = document.getElementsByClassName("close")[0];
+
+    // When the user clicks the button, open the modal 
+    btn.onclick = function() {
+        modal.style.display = "block";
+    }
+
+    // When the user clicks on <span> (x), close the modal
+    span.onclick = function() {
+        modal.style.display = "none";
+    }
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+
+              <!-- edit modal -->
+
+
+       // Get the edit modal element
+       var editModal = document.getElementById("editCategoryModal");
+
+       // Get the button that opens the edit modal
+       var editBtns = document.getElementsByClassName("editBtn");
+   
+       // Get the <span> element that closes the edit modal
+       var editModalClose = document.querySelector("#editCategoryModal .close");
+   
+       // When the user clicks the edit button, open the edit modal 
+       Array.from(editBtns).forEach(function(editBtn) {
+           editBtn.onclick = function() {
+               // Populate the edit modal fields with current category data
+               var categoryRow = this.closest("tr");
+               var categoryId = categoryRow.querySelector("td:first-child").innerText;
+               var categoryName = categoryRow.querySelector("td:nth-child(2)").innerText;
+               var categoryDescription = categoryRow.querySelector("td:nth-child(3)").innerText;
+   
+               document.getElementById("editCategoryId").value = categoryId;
+               document.getElementById("editName").value = categoryName;
+               document.getElementById("editDescription").value = categoryDescription;
+   
+               // Display the edit modal
+               editModal.style.display = "block";
+           };
+       });
+   
+       // When the user clicks on <span> (x), close the edit modal
+       editModalClose.onclick = function() {
+           editModal.style.display = "none";
+       }
+   
+       // When the user clicks anywhere outside of the edit modal, close it
+       window.onclick = function(event) {
+           if (event.target == editModal) {
+               editModal.style.display = "none";
+           }
+       }
+</script>
+
+
+    {% endblock %}

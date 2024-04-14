@@ -2,78 +2,197 @@
 {% load static %}
 
 {% block head %} 
-<!-- Bootstrap CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css">
+    <title>Product Management</title>
+    <style>
+        /* Custom styles for the table */
+        .table-custom {
+            border-collapse: separate;
+            border-spacing: 0 10px;
+            width: 100%;
+            background-color: #fff;
+        }
+
+        .table-custom th,
+        .table-custom td {
+            border: 2px solid #ddd; /* thicker border */
+            padding: 12px;
+            text-align: left;
+        }
+
+        .table-custom th {
+            background-color: #f2f2f2; /* Light gray background */
+            color: #333; /* Dark text color */
+        }
+
+        .table-custom tbody tr:hover {
+            background-color: #f9f9f9; /* Light gray background on hover */
+        }
+
+        .add-product-btn {
+            background-color: #28a745; /* Green background */
+            color: #fff; /* White text color */
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .add-product-btn:hover {
+            background-color: #218838; /* Darker green background on hover */
+        }
+
+        /* Custom styles for the modal */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto; /* Center the modal */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            max-width: 500px; /* Max width of the modal */
+            border-radius: 5px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
 {% endblock %} 
 
 {% block content %} 
-<!--Container Main start-->
-<div class="container">
-    <h2 class="my-4">Product Management</h2>
-    <div class="table-responsive">
-        <table class="table table-bordered tab">
+    <div class="container mt-4">
+        <h2>Product Management</h2>
+        <button id="addProductBtn" class="add-product-btn">Add Product</button>
+        <table class="table-custom">
             <thead>
                 <tr>
-                    <th>id</th>
+                    <th>ID</th>
                     <th>Title</th>
                     <th>Price</th>
                     <th>Category</th>
                     <th>Description</th>
                     <th>Image</th>
                     <th>Stock</th>
-                    <th>Actions</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                <!-- Example product row -->
+                <!-- Your Django template logic to populate the table rows goes here -->
+                {% for i in product %}
                 <tr>
-                    <td>1</td>
-                    <td>Product 1</td>
-                    <td>$100</td>
-                    <td> l </td>
-                    <td>A great product </td>
-                    <td><img src="product1.jpg" alt="Product 1" width="50"></td>
-                    <td>10</td>
+                    <td>{{ i.id }}</td>
+                    <td>{{ i.title }}</td>
+                    <td>{{ i.price }}</td>
+                    <td>{{ i.category }}</td>
+                    <td>{{ i.description }}</td>
+                    <td><img src="{{ i.image.url }}" alt="{{ i.title }}" style="max-width: 100px;"></td>
+                    <td>{{ i.stock }}</td>
                     <td>
-                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editModal">Edit</button>
-                        <button class="btn btn-danger btn-sm">Delete</button>
-                        <button class="btn btn-success btn-sm">Is Listed</button>
+                        <!-- Action buttons such as edit, delete, etc. can be placed here -->
+                        <a class="btn btn-primary" href="">Edit</a>
+                        {% if i.is_listed %}
+                        <a class="btn btn-success" href="">Listed</a>
+                        {% else %}
+                        <a class="btn btn-danger" href="">Unlisted</a>
+                        {% endif %}
                     </td>
                 </tr>
-                <!-- Add more product rows as needed -->
+                {% endfor %}
             </tbody>
         </table>
     </div>
-</div>
 
-<!-- Edit Modal -->
-<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editModalLabel">Edit Product</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="mb-3">
-                        <label for="editTitle" class="form-label">Title</label>
-                        <input type="text" class="form-control" id="editTitle" placeholder="Product Title">
-                    </div>
-                    <div class="mb-3">
-                        <label for="editPrice" class="form-label">Price</label>
-                        <input type="text" class="form-control" id="editPrice" placeholder="Price">
-                    </div>
-                    <!-- Add more fields as needed -->
-                    <button type="submit" class="btn btn-primary">Save changes</button>
-                </form>
-            </div>
+    <!-- Modal for adding product -->
+    <div id="addProductModal" class="modal">
+        <div class="modal-content card add-modal">
+            <span class="close">&times;</span>
+            <form method="POST" id="addProductForm" action="{% url 'add-product' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="id_title">Title:</label>
+                    <input type="text" class="form-control" id="id_title" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="id_price">Price:</label>
+                    <input type="number" class="form-control" id="id_price" name="price" required>
+                </div>
+                <div class="form-group">
+                    <label for="id_category">Category:</label>
+                    <select class="form-control" id="id_category" name="category" required>
+                        <!-- Populate this dropdown with categories -->
+                        {% for c in category %}
+                            <option value="{{ c.id }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="id_description">Description:</label>
+                    <textarea class="form-control" id="id_description" name="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="id_image">Image:</label>
+                    <input type="file" class="form-control" id="id_image" name="image" accept="image/*" required>
+                </div>
+                <div class="form-group">
+                    <label for="id_stock">Stock:</label>
+                    <input type="number" class="form-control" id="id_stock" name="stock" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add</button>
+            </form>
         </div>
     </div>
-</div>
 {% endblock %}
 
 {% block script %}
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.min.js"></script>
+        
+<script>
+    // Get the modal element for adding product
+    var productModal = document.getElementById("addProductModal");
+
+    // Get the button that opens the product modal
+    var addProductBtn = document.getElementById("addProductBtn");
+
+    // Get the <span> element that closes the product modal
+    var productModalCloseBtn = document.getElementsByClassName("close")[0];
+
+    // When the user clicks the button to add a product, open the product modal 
+    addProductBtn.onclick = function() {
+        productModal.style.display = "block";
+    }
+
+    // When the user clicks on <span> (x) in the product modal, close the product modal
+    productModalCloseBtn.onclick = function() {
+        productModal.style.display = "none";
+    }
+
+    // When the user clicks anywhere outside of the product modal, close it
+    window.onclick = function(event) {
+        if (event.target == productModal) {
+            productModal.style.display = "none";
+        }
+    }
+</script>
 {% endblock %}

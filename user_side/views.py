@@ -14,8 +14,9 @@ def UserHome(request):
 
 
 def Signup(request):
-    if request.user.is_authenticated and not request.user.is_superuser:
+    if request.user.is_authenticated and not request.user.is_staff:
         return redirect('home')
+    
     if request.method == 'POST':
         uname = request.POST.get('uname')
         phone = request.POST.get('phone')
@@ -37,7 +38,7 @@ def Signup(request):
     return render(request,'signup.html')
 @never_cache
 def Login(request):
-    if request.user.is_authenticated and not request.user.is_superuser:
+    if request.user.is_authenticated and not request.user.is_staff:
         return redirect('home')
     if request.method == 'POST':
         uname = request.POST.get('username')

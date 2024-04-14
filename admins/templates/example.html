@@ -1,70 +1,268 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Product</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <!-- Button to Open the Modal -->
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#editProductModal">
-        Edit Product
-    </button>
+{% extends 'sidebar.html' %}
+{% load static %}
+{% block head %} 
+    <title>Category Manager</title> 
+    <!-- <link rel="stylesheet" href="{% static '4admin/css/category_manager.css' %}"> -->
+    <style>
+        /* Existing styles */
+        body {
+            font-family: Arial, sans-serif;
+        }
 
-    <!-- The Modal -->
-    <div class="modal" id="editProductModal">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <!-- Modal Header -->
-                <div class="modal-header">
-                    <h4 class="modal-title">Edit Product</h4>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                </div>
-                
-                <!-- Modal Body -->
-                <div class="modal-body">
-                    <form action="/submit-edit-product" method="post" enctype="multipart/form-data">
-                        <input type="hidden" id="productId" name="productId">
-                        <div class="form-group">
-                            <label for="title">Title</label>
-                            <input type="text" class="form-control" id="title" name="title" placeholder="Enter product title" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="price">Price</label>
-                            <input type="number" class="form-control" id="price" name="price" placeholder="Enter product price" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="category">Category</label>
-                            <input type="text" class="form-control" id="category" name="category" placeholder="Enter product category" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="description">Description</label>
-                            <textarea class="form-control" id="description" name="description" rows="3" placeholder="Enter product description" required></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="image">Image</label>
-                            <input type="file" class="form-control-file" id="image" name="image">
-                        </div>
-                        <div class="form-group">
-                            <label for="stock">Stock</label>
-                            <input type="number" class="form-control" id="stock" name="stock" placeholder="Enter product stock" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Submit</button>
-                    </form>
-                </div>
-                
-                <!-- Modal Footer -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 2px solid #ddd; /* Increased border thickness */
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        /* Existing modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* New styles */
+        .top-right {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 20px;
+        }
+
+        /* Adjust the form layout to be vertical */
+        #addCategoryForm label, #addCategoryForm input[type="text"] {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        #addCategoryForm input[type="text"] {
+            width: 100%;
+            max-width: 300px; /* Adjust as needed */
+        }
+
+        /* Card styles */
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Ensure the form inputs are styled appropriately within the card */
+        #addCategoryForm input[type="text"] {
+            width: 100%;
+            max-width: 300px; /* Adjust as needed */
+            margin-bottom: 10px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        #addCategoryForm button[type="submit"] {
+            padding: 5px 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        #addCategoryForm button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        /* Adjust action column width */
+        #categoryTable th:last-child, #categoryTable td:last-child {
+            width: 150px; /* Adjust as needed */
+        }
+        .add-modal {
+            width: 40px; /* Adjust as needed */
+        }
+        
+        .edit-modal {
+            width: 400px; /* Adjust as needed */
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="top-right">
+        <button class="btn btn-dark" id="addBtn">Add Category</button>
     </div>
+    <h2>Category Table</h2>
+    <table id="categoryTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Categories will be added here dynamically -->
+            <tr>
+                <td>1</td>
+                <td>Product 1</td>
+                <td>hau hufasdf</td>
+                <td>
+                    <button class="btn btn-primary editBtn">Edit</button>
+                    <button class="btn btn-danger">Delete</button>
+                    <button class="btn btn-success">Listed</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
 
-    <!-- Optional: Include jQuery and Bootstrap JS for dynamic functionality -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-</body>
-</html>
+<!-- Modal for adding category -->
+<div id="addCategoryModal" class="modal">
+    <div class="modal-content card add-modal">
+        <span class="close">&times;</span>
+        <form id="addCategoryForm">
+            {% csrf_token %}
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
+            <label for="description">Description:</label>
+            <input type="text" id="description" name="description" required>
+            <button type="submit">Add</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal for editing category -->
+<div id="editCategoryModal" class="modal">
+    <div class="modal-content card edit-modal">
+        <span class="close">&times;</span>
+        <form id="editCategoryForm">
+            {% csrf_token %}
+            <input type="hidden" id="editCategoryId" name="categoryId">
+            <label for="editName">Name:</label>
+            <input type="text" id="editName" name="editName" required>
+            <label for="editDescription">Description:</label>
+            <input type="text" id="editDescription" name="editDescription" required>
+            <button type="submit">Update</button>
+        </form>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block script %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var addBtn = document.getElementById('addBtn');
+    var modal = document.getElementById('addCategoryModal');
+    var closeModal = document.querySelector("#addCategoryModal .close");
+    var editModal = document.getElementById('editCategoryModal');
+    var closeEditModal = document.querySelector("#editCategoryModal .close");
+    var editButtons = document.querySelectorAll('.editBtn');
+
+    // Show add category modal when add button is clicked
+    addBtn.onclick = function() {
+        modal.style.display = "block";
+    };
+
+    // Hide add category modal when close button is clicked
+    closeModal.onclick = function() {
+        modal.style.display = "none";
+    };
+
+    // Hide add category modal when user clicks outside of it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    };
+
+    // Show edit category modal when edit button is clicked
+    editButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            editModal.style.display = "block";
+            // Fetch category details and populate the form fields for editing
+            var categoryId = this.closest('tr').querySelector('td:first-child').innerText;
+            var categoryName = this.closest('tr').querySelector('td:nth-child(2)').innerText;
+            var categoryDescription = this.closest('tr').querySelector('td:nth-child(3)').innerText;
+            document.getElementById('editCategoryId').value = categoryId;
+            document.getElementById('editName').value = categoryName;
+            document.getElementById('editDescription').value = categoryDescription;
+        });
+    });
+
+    // Hide edit category modal when close button is clicked
+    closeEditModal.onclick = function() {
+        editModal.style.display = "none";
+    };
+
+    // Hide edit category modal when user clicks outside of it
+    window.onclick = function(event) {
+        if (event.target == editModal) {
+            editModal.style.display = "none";
+        }
+    };
+
+    // Handle form submission for adding category
+    var addCategoryForm = document.getElementById('addCategoryForm');
+    addCategoryForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        // Submit form via AJAX or fetch API
+    });
+
+    // Handle form submission for editing category
+    var editCategoryForm = document.getElementById('editCategoryForm');
+    editCategoryForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        // Submit form via AJAX or fetch API
+    });
+});
+</script>
+{% endblock %}
