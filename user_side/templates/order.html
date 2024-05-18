@@ -1,0 +1,96 @@
+{% extends 'navbar.html' %}
+{% load static %}
+
+{% block head %}
+<title>My Orders</title>
+<style>
+    .order-images {
+        display: flex;
+        align-items: center;
+    }
+    .order-images img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    .additional-items {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #ccc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: #fff;
+        margin-right: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<!-- Start Banner Area -->
+<section class="banner-area organic-breadcrumb">
+    <div class="container">
+        <div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
+            <div class="col-first">
+                <h1>My Orders</h1>
+                <nav class="d-flex align-items-center">
+                    <a href="{% url 'home' %}">Home<span class="lnr lnr-arrow-right"></span></a>
+                    <a href="{% url 'order-page' %}">My Orders</a>
+                </nav>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Banner Area -->
+
+<!-- Order Area -->
+<section class="order_details section_gap">
+    <div class="container">
+        <div class="order_details_table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th><strong>Order ID</strong></th>
+                        <th><strong>Products</strong></th>
+                        <th><strong>Total</strong></th>
+                        <th><strong>Order Date</strong></th>
+                        <th><strong>Payment Method</strong></th>
+                        <th><strong>Status</strong></th>
+                        <th><strong>Details</strong></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Loop through each order to display -->
+                    {% for order in user_orders %}
+                        <tr>
+                            <td>{{ order.id }}</td>
+                            <td>
+                                <div class="order-images">
+                                    {% for item in order.orderitem_set.all|slice:":2" %}
+                                        <img src="{{ item.product.image.url }}" alt="{{ item.product.title }}">
+                                    {% endfor %}
+                                    {% if order.orderitem_set.count > 2 %}
+                                        <div class="additional-items">+{{ order.orderitem_set.count|add:"-2" }}</div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>{{ order.total_price }} rs</td>
+                            <td>{{ order.order_date }}</td>
+                            <td>{{ order.payment_method }}</td>
+                            <td>{% if order.is_complete %}Completed{% else %}Shipping{% endif %}</td>
+                            <td><a href="{% url 'order-details' order.id %}" class="btn btn-primary">View Details</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+<!-- End Order Area -->
+{% endblock %}
+
+{% block foot %}
+{% endblock %}

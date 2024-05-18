@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'admins',
 ]
 
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -140,4 +142,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'user_side.Users'
 
-#media root
+DEFAULT_FROM_EMAIL = 'Music Beats <fasalrahmanatk706@gmail.com>'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'fasalrahmanatk706@gmail.com'
+EMAIL_HOST_PASSWORD = 'zmto bjdx ugrx mjin'

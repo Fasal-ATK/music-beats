@@ -1,0 +1,101 @@
+{% extends 'navbar.html' %}
+{% load static %}
+
+{% block head %}
+<title>Order Details</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% endblock %}
+
+{% block body %}
+<!-- Start Banner Area -->
+<section class="banner-area organic-breadcrumb">
+    <div class="container">
+        <div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
+            <div class="col-first">
+                <h1>Order Details</h1>
+                <nav class="d-flex align-items-center">
+                    <a href="{% url 'home' %}">Home<span class="lnr lnr-arrow-right"></span></a>
+                    <a href="{% url 'order-page' %}">My Order <span class="lnr lnr-arrow-right"></span></a>
+                    <a href="">Order Details</a>
+                </nav>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Banner Area -->
+
+<section class="order_details mb-5">
+    <div class="container">
+        <div class="order_details_table">
+            <h2>Ordered Items</h2> 
+            <h2 style="text-align: right;">Order Status: {{ order.is_complete|yesno:"Complete,Pending" }}</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Total Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Loop through each ordered item to display -->
+                    {% for item in order_items %}
+                        <tr>
+                            <td><img src="{{ item.product.image.url }}" alt="{{ item.product.title }}" style="width: 80px;"></td>
+                            <td>{{ item.product.title }}</td>
+                            <td>{{ item.product.price }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ item.price }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <h2 style="text-align: right;">Total Price = <u>{{ order.total_price }}</u>rs</h2>
+            
+            <div class="order_address mt-5">
+                <h5 id="addressHeader" style="cursor: pointer;">Show Address <i id="arrow" class="fas fa-chevron-down"></i></h5>
+                <div id="addressDetails" style="display: none;">
+                    {{ order_address.name }}
+                    <br>{{ order_address.address_line }}
+                    <br>{{ order_address.city }}, {{ order_address.state }}
+                    <br>{{ order_address.postal_code }}
+                    <br>{{ order_address.country }}
+                    <br>Phone: {{ order_address.phone }}
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                {% if not order.is_complete %}
+                    <form method="post" action="">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Cancel Order</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block foot %}
+<script>
+    document.getElementById('addressHeader').addEventListener('click', function() {
+        var addressDetails = document.getElementById('addressDetails');
+        var arrow = document.getElementById('arrow');
+        if (addressDetails.style.display === 'none' || addressDetails.style.display === '') {
+            addressDetails.style.display = 'block';
+            arrow.classList.remove('fa-chevron-down');
+            arrow.classList.add('fa-chevron-up');
+            document.getElementById('addressHeader').innerHTML = 'Hide Address <i id="arrow" class="fas fa-chevron-up"></i>';
+        } else {
+            addressDetails.style.display = 'none';
+            arrow.classList.remove('fa-chevron-up');
+            arrow.classList.add('fa-chevron-down');
+            document.getElementById('addressHeader').innerHTML = 'Show Address <i id="arrow" class="fas fa-chevron-down"></i>';
+        }
+    });
+</script>
+{% endblock %}

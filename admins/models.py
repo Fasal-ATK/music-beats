@@ -1,8 +1,8 @@
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
 
 
-# Product Models
+# create your models here
+
 
 class Category(models.Model):
     name = models.CharField(max_length = 50)
@@ -12,12 +12,13 @@ class Category(models.Model):
     def __str__(self) -> str:
         return self.name
 
+
 class Product(models.Model):
     title = models.CharField(max_length = 100)
     price =  models.FloatField()
     category = models.ForeignKey(Category, on_delete = models.CASCADE)
     description = models.TextField(null=True)
-    image = ArrayField(models.ImageField(upload_to='media/'), blank=True)
+    image = models.ImageField(upload_to='product/', blank=True)
     stock = models.BigIntegerField()
     is_listed = models.BooleanField(default=True)
 
@@ -25,3 +26,13 @@ class Product(models.Model):
         return self.title 
 
 
+#--------------------------- Brand ----------------------------
+
+
+class Brand(models.Model):
+    name = models.CharField(max_length = 100)
+    logo = models.ImageField(upload_to='brand_logo/', null=True, blank=True)
+    is_listed = models.BooleanField(default = True)
+
+    def __str__(self) -> str:
+        return self.name

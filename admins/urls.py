@@ -18,5 +18,16 @@ urlpatterns = [
     path('edit-category/',views.Edit_Category,name='edit-category'),
     
     path('product/', views.Product_Manager, name='product'),
-    path('add-product/',views.Add_Product,name='add-product')
+    path('add-product/',views.Add_Product,name='add-product'),
+    path('edit-product/',views.Edit_Product,name='edit-product'),
+    path('list-product/<int:p_id>',views.List_Product,name='list-product'),
+
+    path('brand/',views.Brand_Manager,name='brand'),
+    path('add-brand/',views.Add_Brand,name='add-brand'),
+    path('edit-brand/',views.Edit_Brand,name='edit-brand'),
+    path('list-brand/<int:b_id>',views.List_Brand,name='list-brand'),
+
+    path('orders/',views.Order_Manager,name='orders'),
 ]
+
+# fasal = 12345678

@@ -1,0 +1,351 @@
+
+import random
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, HttpResponseRedirect
+from django.views.decorators.cache import never_cache
+from django.core.mail import send_mail
+
+from django.shortcuts import get_object_or_404, render,redirect
+from django.contrib.auth import authenticate,login,logout
+from django.contrib import messages
+
+from user_side.models import Users,Cart,CartItem,Address,Order,OrderItem
+from admins.models import Product,Category
+from user_side.forms import AddressForm
+
+
+
+
+# Create your views here.
+
+
+@never_cache
+def UserHome(request):
+    product = Product.objects.filter(is_listed=True)
+    category = Category.objects.filter(is_listed=True)
+    return render(request,'index.html',{'product':product,'category':category})
+
+#------------------------------------- Signup / Login / OTP ------------------------------
+
+@never_cache
+def Signup(request):
+    if request.method == 'POST':
+        uname = request.POST.get('uname')
+        phone = request.POST.get('phone')
+        email = request.POST.get('email')
+        pass1 = request.POST.get('pass')
+        pass2 = request.POST.get('re_pass')
+        if len(pass1)<8:
+            messages.error(request,"password need to be 8 or more charecters")
+        elif len(pass1) > 25:
+            messages.error(request,"password is too big")
+        elif pass1 != pass2:
+            messages.error(request,"password does  not match")
+        elif not uname.isalnum():
+            messages.error(request,"Username is not allowed")
+        elif Users.objects.filter(username=uname).exists():
+            messages.error(request,'Username already exist')
+        elif Users.objects.filter(email=email).exists():
+            messages.error(request,'Email already exist')
+        else:
+            # Generate OTP
+            otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+            # Store OTP and email in session
+            request.session['signup_otp'] = otp
+            request.session['signup_email'] = email
+            #calling the send_otp_email function
+            send_otp_email(email,otp)
+            # Store user details and OTP in session
+            request.session['signup_user_details'] = {
+                'uname': uname,
+                'phone': phone,
+                'email': email,
+                'pass': pass1,
+            }
+            print('works')
+            return redirect('verify_otp')
+    return render(request,'signup.html')
+def send_otp_email(email, otp):
+    send_mail(
+        'Verification Code',
+        f'Your OTP is: {otp}',
+        'fasalrahmanatk706@gmail.com',
+        [email],
+        fail_silently=False,
+    )
+    
+def Verify_OTP(request):
+    if request.method == 'POST':
+        # Check if OTP and signup email are in session
+        if 'signup_otp' in request.session and 'signup_email' in request.session:
+            otp = request.POST.get('combined-otp')
+            print('otp : ',otp)
+            if otp == str(request.session['signup_otp']):
+                # OTP verification successful
+                # Create user
+                user_details = request.session.pop('signup_user_details')
+                new_user = Users.objects.create_user(username=user_details['uname'], email=user_details['email'],
+                                                      password=user_details['pass'], phone=user_details['phone'])
+                new_user.save()
+                messages.success(request, "Account created successfully. You can now login.")
+                return redirect('ulogin')
+            else:
+                messages.error(request, "Invalid OTP. Please try again.")
+                return redirect('signup')
+        else:
+            messages.error(request, "Session expired. Please try again.")
+            return redirect('signup')
+    return render(request,'otp.html')
+
+
+
+@never_cache
+def Login(request):
+    if request.user.is_authenticated and not request.user.is_staff:
+        return redirect('home')
+    if request.method == 'POST':
+        uname = request.POST.get('username')
+        pswrd = request.POST.get('password')
+        user = authenticate(request,username = uname, password = pswrd)
+        if user is not None :
+            login(request,user)
+            if request.user.is_staff:
+                return redirect('adminhome/')
+            else:
+                return redirect('home')
+        else:
+            messages.error(request,"username or password incorrect")
+    return render(request,'login.html')
+
+@never_cache
+def Logout(request):
+    logout(request)
+    return redirect('ulogin')
+
+
+#-------------------------------------  Shop ------------------------------
+
+
+def Shop(request):
+    product = Product.objects.filter(is_listed=True)
+    category = Category.objects.filter(is_listed=True)
+    return render(request,'shop.html',{'product':product,'category':category})
+
+def Single_Product(request,id):
+    product = Product.objects.get(id=id)
+    return render(request,'single-product.html',{'product':product})
+
+
+
+
+#-------------------------------------  Cart ------------------------------
+
+@login_required(login_url='ulogin')
+def Cart_Page(request):
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    cart_items = CartItem.objects.filter(cart=cart).order_by('-id')
+    total_price = 0
+    for item in cart_items:
+        item.total_price = item.product.price * item.quantity
+        total_price += item.total_price
+    return render(request, 'cart.html', {'cart_items': cart_items, 'total_price': total_price})
+
+
+
+@login_required(login_url='ulogin')
+def Add_Cart(request,product_id):
+    product = Product.objects.get(id = product_id)
+    if product.stock == 0:
+        messages.error(request,f" '{product.title}' is out of stock ")
+        return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    if cartitem := CartItem.objects.filter(cart=cart, product=product).first():
+        if cartitem.quantity < product.stock:
+            cartitem.quantity += 1
+            cartitem.save()
+    else:
+        CartItem.objects.create(cart=cart, product=product)
+    messages.success(request, "Product added to cart successfully.")
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER','/'))
+
+
+@login_required(login_url='ulogin')
+def Remove_Cart(request, cartitem_id):
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        try:
+            cartitem = CartItem.objects.get(id=cartitem_id)
+            cartitem.delete()
+
+            # Recalculate total price
+            cart = cartitem.cart
+            cart_items = CartItem.objects.filter(cart=cart)
+            total_price = sum(item.product.price * item.quantity for item in cart_items)
+
+            return JsonResponse({'success': True, 'total_price': total_price})
+        except CartItem.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Cart item does not exist'})
+    else:
+        return JsonResponse({'success': False, 'message': 'Invalid request'})
+
+
+@login_required(login_url='ulogin')
+def Update_Cart(request, cartitem_id):
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        try:
+            cartitem = CartItem.objects.get(id=cartitem_id)
+            new_quantity = int(request.POST.get('qty'))
+            if 1 <= new_quantity <= 10 and new_quantity <= cartitem.product.stock:
+                cartitem.quantity = new_quantity
+                cartitem.save()
+                
+                # Recalculate total price
+                cart = cartitem.cart
+                cart_items = CartItem.objects.filter(cart=cart)
+                total_price = sum(item.product.price * item.quantity for item in cart_items)
+                item_total = cartitem.product.price * cartitem.quantity
+
+                return JsonResponse({'success': True, 'total_price': total_price, 'item_total': item_total})
+            else:
+                return JsonResponse({'success': False, 'message': 'Quantity must be between 1 and 10 and within stock limits'})
+        except CartItem.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Cart item does not exist'})
+    else:
+        return JsonResponse({'success': False, 'message': 'Invalid request'})
+
+
+
+#-------------------------------------  Profile ------------------------------
+
+
+@login_required(login_url='ulogin')
+def User_Profile(request):
+    user_address = Address.objects.filter(user=request.user)
+    return render(request,'profile.html',{'user_address':user_address})
+
+
+@login_required(login_url='ulogin')
+def Add_Address(request):
+    address_limit = 6 
+    address_count = Address.objects.filter(user=request.user).count()
+    if address_count >= address_limit:
+        messages.error(request, "Address limit reached. You cannot add more addresses.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+    
+    if request.method == 'POST':
+        form = AddressForm(request.POST)
+        if form.is_valid():
+            form.instance.user = request.user
+            form.save()
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+    else:
+        form = AddressForm()
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+
+@login_required(login_url='ulogin')
+def Edit_Address(request, address_id):
+    print('work')
+    address = get_object_or_404(Address, id=address_id, user=request.user)
+    print('before post')
+    if request.method == 'POST':
+        print('post')
+        form = AddressForm(request.POST, instance=address)
+        if form.is_valid():
+            form.save()
+            return JsonResponse({'success': True}) 
+        else:
+            return JsonResponse({'errors': form.errors}, status=400)
+    else:
+        print('else')
+        form = AddressForm(instance=address)
+        data = {
+            'id': address.id,
+            'name': address.name,
+            'address_line': address.address_line,
+            'phone': address.phone,
+            'city': address.city,
+            'state': address.state,
+            'postal_code': address.postal_code,
+            'country': address.country,
+        }
+        return JsonResponse(data)
+    
+def Delete_Address(request, address_id):
+    if request.method == 'POST':
+        try:
+            address = Address.objects.get(id=address_id)
+            address.delete()
+            return JsonResponse({'message': 'Address deleted successfully'}, status=200)
+        except Address.DoesNotExist:
+            return JsonResponse({'error': 'Address does not exist'}, status=404)
+@never_cache
+def Change_Password(request):
+    if request.method == 'POST':
+        current_pass = request.POST.get("current_password")
+        new_pass = request.POST.get("new_password")
+        confirm_pass = request.POST.get("confirm_new_password")
+        if new_pass != confirm_pass:
+            messages.error(request, 'Confirmation password does not match')
+            return redirect('profile')
+        user = request.user
+        if user.check_password(current_pass):
+            user.set_password(new_pass)
+            user.save()
+            logout(request)  # Use the logout function to log the user out
+            messages.success(request, 'Password changed successfully')
+            print('Password changed successfully')
+        else:
+            messages.error(request, 'Incorrect current password')
+            print('Incorrect current password')
+    return redirect('profile')
+
+#-------------------------------------  checkout/order/.... ------------------------------
+
+
+@login_required(login_url='ulogin')
+def Product_Checkout(request):
+    cart_items= CartItem.objects.filter(cart__user=request.user)
+    total_price = sum(item.product.price * item.quantity for item in cart_items)
+    user_address = Address.objects.filter(user=request.user)
+    return render(request,'checkout.html',{'cart_items':cart_items,'total_price': total_price,'user_address':user_address})
+
+
+@login_required(login_url='ulogin')
+def Place_Order(request):
+    if request.method == 'POST':
+        user_cart = Cart.objects.get(user=request.user)
+        cart_items = CartItem.objects.filter(cart=user_cart)
+        cart_total_price = sum(item.total for item in cart_items)
+        payment_method = request.POST.get('payment_method')
+        address_id = request.POST.get('address')
+        address = get_object_or_404(Address, id=address_id)  # Retrieve the address object
+        # Create the order
+        order = Order.objects.create(
+            user=request.user,
+            address=address, 
+            total_price=cart_total_price,
+            payment_method=payment_method
+        )
+        # Create order items for each item in the cart
+        for item in cart_items:
+            OrderItem.objects.create(
+                order=order,
+                product=item.product,
+                price=item.total,
+                quantity=item.quantity
+            )
+        user_cart.cartitem_set.all().delete() # Clear the user's cart
+        messages.success(request, 'Order placed successfully. Thank you!')
+        return redirect('order-page')
+    else:
+        return redirect('checkout')
+
+
+@login_required(login_url='ulogin')
+def Order_Page(request):
+    user_orders = Order.objects.filter(user=request.user)
+    return render(request,'order.html',{'user_orders': user_orders})
+
+def Order_Details(request,order_id):
+    order_items = OrderItem.objects.filter(order__id=order_id)
+    return render(request,'order_details.html',{'order_items':order_items})

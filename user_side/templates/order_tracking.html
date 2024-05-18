@@ -1,0 +1,71 @@
+{% extends 'navbar.html' %}
+{% load static %}
+
+{% block head %}
+<title>Order Tracking</title>
+{% endblock %}
+
+{% block body %}
+<!-- Start Order Tracking Section -->
+<section class="order-tracking">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <h2 class="text-center mb-4">Order Tracking</h2>
+                <!-- Order Tracking Form -->
+                <form action="#" method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="order_number">Enter Order Number:</label>
+                        <input type="text" class="form-control" id="order_number" name="order_number" placeholder="E.g., 123456789">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Track Order</button>
+                </form>
+            </div>
+        </div>
+        <!-- Order Tracking Details (To be displayed dynamically) -->
+        <div class="row mt-5">
+            <div class="col-md-8 offset-md-2">
+                <div class="order-details">
+                    <h3 class="mb-3">Order Details</h3>
+                    <p><strong>Order ID:</strong> #123456789</p>
+                    <p><strong>Total Amount:</strong> $100.00</p>
+                    <p><strong>Order Date:</strong> January 1, 2023</p>
+                </div>
+                <div class="tracking-info mt-4">
+                    <h3 class="mb-3">Tracking Information</h3>
+                    <p><strong>Status:</strong> Out for Delivery</p>
+                    <p><strong>Expected Delivery:</strong> January 10, 2023</p>
+                    <p><strong>Carrier:</strong> XYZ Shipping</p>
+                    <p><strong>Tracking Number:</strong> 123456789</p>
+                </div>
+                <div class="order-timeline mt-4">
+                    <h3 class="mb-3">Order Timeline</h3>
+                    <ul class="timeline">
+                        <li>
+                            <div class="timeline-badge">1</div>
+                            <div class="timeline-panel">
+                                <div class="timeline-heading">
+                                    <h4 class="timeline-title">Order Placed</h4>
+                                    <p><small class="text-muted">January 1, 2023</small></p>
+                                </div>
+                            </div>
+                        </li>
+                        <!-- Add more timeline entries as needed -->
+                    </ul>
+                </div>
+                <!-- Delivery Status Mapping -->
+                <div class="delivery-status mt-5">
+                    <h3 class="mb-3">Delivery Status Map</h3>
+                    <!-- Add your delivery status mapping content here -->
+                    <img src="{% static 'images/delivery_status_map.jpg' %}" alt="Delivery Status Map" class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Order Tracking Section -->
+{% endblock %}
+
+{% block foot %}
+{% endblock %}

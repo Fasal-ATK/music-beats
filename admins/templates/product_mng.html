@@ -29,7 +29,7 @@
         }
 
         .add-product-btn {
-            background-color: #28a745; /* Green background */
+            background-color: #7e7e7e; /* Green background */
             color: #fff; /* White text color */
             border: none;
             padding: 10px 20px;
@@ -40,7 +40,7 @@
         }
 
         .add-product-btn:hover {
-            background-color: #218838; /* Darker green background on hover */
+            background-color: #000000; /* Darker green background on hover */
         }
 
         /* Custom styles for the modal */
@@ -79,13 +79,46 @@
             text-decoration: none;
             cursor: pointer;
         }
+
+        /* Adjusting action column width */
+        .action-column {
+            width: 120px;
+            text-align: center;
+        }
+
+        .action-column button {
+            margin-right: 5px;
+        }
     </style>
+    <link href="{% static 'cropperjs/cropper.css' %}" rel="stylesheet">
 {% endblock %} 
 
+
+
 {% block content %} 
+
+{% if messages %}
+{% for message in messages %}
+    {% if message.tags == 'error' %}
+        <div class="alert alert-danger" role="alert">
+            {{ message }}
+        </div>
+    {% elif message.tags == 'success' %}
+        <div class="alert alert-success" role="alert">
+            {{ message }}
+        </div>
+    {% elif message.tags == 'info' %}
+        <div class="alert alert-info" role="alert">
+            {{ message }}
+        </div>
+    {% endif %}
+{% endfor %}
+{% endif %}
+
     <div class="container mt-4">
         <h2>Product Management</h2>
         <button id="addProductBtn" class="add-product-btn">Add Product</button>
+
         <table class="table-custom">
             <thead>
                 <tr>
@@ -96,7 +129,7 @@
                     <th>Description</th>
                     <th>Image</th>
                     <th>Stock</th>
-                    <th>Action</th>
+                    <th class="action-column">Action</th> <!-- Updated class for action column -->
                 </tr>
             </thead>
             <tbody>
@@ -110,13 +143,22 @@
                     <td>{{ i.description }}</td>
                     <td><img src="{{ i.image.url }}" alt="{{ i.title }}" style="max-width: 100px;"></td>
                     <td>{{ i.stock }}</td>
-                    <td>
+                    <td class="action-column"> <!-- Updated class for action column -->
                         <!-- Action buttons such as edit, delete, etc. can be placed here -->
-                        <a class="btn btn-primary" href="">Edit</a>
+
+                        <a class="btn btn-primary edit-product-btn" 
+                                data-product-id="{{ i.id }}"
+                                data-product-title="{{ i.title }}"
+                                data-product-price="{{ i.price }}"
+                                data-product-category="{{ i.category_id }}"
+                                data-product-description="{{ i.description }}"
+                                data-product-stock="{{ i.stock }}">
+                            Edit
+                    </a>
                         {% if i.is_listed %}
-                        <a class="btn btn-success" href="">Listed</a>
+                            <a class="btn btn-success" href="{% url 'list-product' i.id %}">Listed</a>
                         {% else %}
-                        <a class="btn btn-danger" href="">Unlisted</a>
+                            <a class="btn btn-danger" href="{% url 'list-product' i.id %}">Unlisted</a>
                         {% endif %}
                     </td>
                 </tr>
@@ -152,10 +194,16 @@
                     <label for="id_description">Description:</label>
                     <textarea class="form-control" id="id_description" name="description" required></textarea>
                 </div>
+
                 <div class="form-group">
                     <label for="id_image">Image:</label>
                     <input type="file" class="form-control" id="id_image" name="image" accept="image/*" required>
                 </div>
+                <!-- Additional image tag for displaying the selected image -->
+                <div class="img-container">
+                    <img id="cropperImg" src="#" alt="Selected image">
+                </div>
+
                 <div class="form-group">
                     <label for="id_stock">Stock:</label>
                     <input type="number" class="form-control" id="id_stock" name="stock" required>
@@ -164,35 +212,162 @@
             </form>
         </div>
     </div>
+
+    <!-- Modal for editing product -->
+    <div id="editProductModal" class="modal">
+        <div class="modal-content card edit-modal">
+            <span class="close">&times;</span>
+            <form method="POST" id="editProductForm" action="{% url 'edit-product' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" id="edit_product_id" name="product_id">
+                <div class="form-group">
+                    <label for="edit_title">Title:</label>
+                    <input type="text" class="form-control" id="edit_title" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_price">Price:</label>
+                    <input type="number" class="form-control" id="edit_price" name="price" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_category">Category:</label>
+                    <select class="form-control" id="edit_category" name="category" required>
+                        <!-- Populate this dropdown with categories -->
+                        {% for c in category %}
+                            <option value="{{ c.id }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit_description">Description:</label>
+                    <textarea class="form-control" id="edit_description" name="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="edit_image">Image:</label>
+                    <input type="file" class="form-control" id="edit_image" name="image" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <label for="edit_stock">Stock:</label>
+                    <input type="number" class="form-control" id="edit_stock" name="stock" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </form>
+        </div>
+    </div>
 {% endblock %}
 
 {% block script %}
-        
+<script src="{% static 'cropperjs/cropper.js' %}"></script>
 <script>
-    // Get the modal element for adding product
-    var productModal = document.getElementById("addProductModal");
+    // Function to display selected image
+    function displayImage(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('cropperImg').src = e.target.result;
+                // Re-initialize Cropper.js with the new image source
+                cropper.replace(e.target.result);
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
 
-    // Get the button that opens the product modal
+    // Initialize Cropper.js with an empty image
+    var cropper = new Cropper(document.getElementById('cropperImg'), {
+        aspectRatio: 1, // Aspect ratio for cropping (e.g., 1:1)
+        viewMode: 1, // Display mode: 0 - move, 1 - crop
+        zoomable: false // Disable zooming
+    });
+
+    // Handle file input change
+    document.getElementById('id_image').addEventListener('change', function() {
+        displayImage(this);
+    });
+
+    // Handle form submission
+    document.getElementById('imageForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        // Get cropped image data
+        var croppedData = cropper.getCroppedCanvas().toDataURL();
+        // Append cropped image data to form as hidden input
+        var hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'cropped_image';
+        hiddenInput.value = croppedData;
+        this.appendChild(hiddenInput);
+        // Submit form
+        this.submit();
+    });
+</script>
+
+
+
+
+<!-- Script for handling add product modal -->
+<script>
+    var addProductModal = document.getElementById("addProductModal");
     var addProductBtn = document.getElementById("addProductBtn");
+    var addProductModalCloseBtn = document.querySelector("#addProductModal .close");
 
-    // Get the <span> element that closes the product modal
-    var productModalCloseBtn = document.getElementsByClassName("close")[0];
-
-    // When the user clicks the button to add a product, open the product modal 
     addProductBtn.onclick = function() {
-        productModal.style.display = "block";
+        addProductModal.style.display = "block";
     }
 
-    // When the user clicks on <span> (x) in the product modal, close the product modal
-    productModalCloseBtn.onclick = function() {
-        productModal.style.display = "none";
+    addProductModalCloseBtn.onclick = function() {
+        addProductModal.style.display = "none";
     }
 
-    // When the user clicks anywhere outside of the product modal, close it
     window.onclick = function(event) {
-        if (event.target == productModal) {
-            productModal.style.display = "none";
+        if (event.target == addProductModal) {
+            addProductModal.style.display = "none";
         }
     }
 </script>
+
+<!-- Script for handling edit product modal -->
+<script>
+    var editProductModal = document.getElementById("editProductModal");
+    var editProductModalCloseBtn = document.querySelector("#editProductModal .close");
+
+    editProductModalCloseBtn.onclick = function() {
+        editProductModal.style.display = "none";
+    }
+
+    function openEditProductModal(product) {
+        document.getElementById("edit_product_id").value = product.id;
+        document.getElementById("edit_title").value = product.title;
+        document.getElementById("edit_price").value = product.price;
+        document.getElementById("edit_category").value = product.category_id;
+        document.getElementById("edit_description").value = product.description;
+        document.getElementById("edit_stock").value = product.stock;
+        editProductModal.style.display = "block";
+    }
+
+    var editProductBtns = document.querySelectorAll(".edit-product-btn");
+
+    editProductBtns.forEach(function(btn) {
+        btn.addEventListener("click", function() {
+            var productId = this.dataset.productId;
+            var productTitle = this.dataset.productTitle;
+            var productPrice = this.dataset.productPrice;
+            var productCategory = this.dataset.productCategory;
+            var productDescription = this.dataset.productDescription;
+            var productStock = this.dataset.productStock;
+            openEditProductModal({
+                id: productId,
+                title: productTitle,
+                price: productPrice,
+                category_id: productCategory,
+                description: productDescription,
+                stock: productStock
+            });
+        });
+    });
+
+    window.onclick = function(event) {
+        if (event.target == editProductModal) {
+            editProductModal.style.display = "none";
+        }
+    }
+</script>
+
 {% endblock %}

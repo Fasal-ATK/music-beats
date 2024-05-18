@@ -1,0 +1,476 @@
+{% extends 'navbar.html' %}
+{% load static %}
+
+{% block head %}
+<title>Profile</title>
+<style>
+    .address-card {
+        margin-bottom: 20px;
+    }
+    .profile-card {
+        margin-top: 20px;
+        background-color: #e5ecee !important;
+    }
+    .address-card {
+        background-color:#d8dacd!important;
+    }
+    .profile-table {
+        width: 100%;
+    }
+    .profile-table th,
+    .profile-table td {
+        padding: 10px;
+        text-align: left;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+    <!-- Start Banner Area -->
+    <section class="banner-area organic-breadcrumb">
+        <div class="container">
+            <div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
+                <div class="col-first">
+                    <h1>My Orders</h1>
+                    <nav class="d-flex align-items-center">
+                        <a href="">Home<span class="lnr lnr-arrow-right"></span></a>
+                        <a href="">My Orders</a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </section>
+    <div class="container content-container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 mx-auto">
+                <div class="card profile-card">
+                    <div class="card-body ">
+                        <h2 class="card-title text-center mb-4">Profile Details</h2>
+                        <table class="profile-table " >
+                          
+                            <tr>
+                                <th>Name :</th>
+                                <td><h6>{{request.user.username|capfirst}}</h6></td>
+                            </tr>
+                            <tr>
+                                <th>Phone :</th>
+                                <td>{{request.user.phone}}</td>
+                            </tr>
+                            <tr>
+                                <th>Email :</th>
+                                <td>{{request.user.email}}</td>
+                            </tr>
+                            <tr>
+                                <th></th>
+                                <td></td>
+                            </tr>
+                        </table>
+                        <a href="" class="pass" id="changePasswordLink" style="color: blue;">change password?</a>
+                        <a href="{% url 'order-page' %}" class="btn btn-dark float-right">My Order</a>
+                    </div>
+                </div>
+                <div class="text-center mt-3">
+                  <button type="button" class="btn btn-info" id="addAddressBtn">Add Address</button>
+              </div>
+            </div>
+        </div>
+        <div class="container">
+          <div class="row justify-content-center mt-4">
+            {% for address in user_address %}
+            <div class="col-md-4">
+                <div class="card address-card">
+                    <div class="card-body">
+                        <h2 class="address-name text-center">{{ address.name }}</h2>
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <label>Phone:</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <p class="phone">{{ address.phone }}</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <label>Address:</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <p class="address-line">{{ address.address_line }}</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <label>City:</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <p class="city">{{ address.city }}</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <label>State:</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <p class="state">{{ address.state }}</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <label>Post:</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <p class="postal-code">{{ address.postal_code }}</p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <label>Country:</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <p class="country">{{ address.country }}</p>
+                            </div>
+                        </div>
+                        <div class="action-buttons text-center">
+                          <a href="#" class="btn btn-success edit-address-btn" data-address-id="{{ address.id }}">Edit</a>
+                          <a href="#" class="btn btn-danger delete-address-btn" data-address-id="{{ address.id }}">Delete</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+          </div>
+      </div>
+      
+    </div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" role="dialog" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="changePasswordModalLabel">Change Password</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="changePasswordForm" method="POST">
+            {% csrf_token %}
+            <!-- Password change form fields -->
+            <div class="form-group">
+              <label for="current_password">Current Password</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="current_password" name="current_password" required>
+                <div class="input-group-append">
+                  <button class="btn btn-outline-secondary toggle-password" type="button">
+                    <i class="fa fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="new_password">New Password</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="new_password" name="new_password" required>
+                <div class="input-group-append">
+                  <button class="btn btn-outline-secondary toggle-password" type="button">
+                    <i class="fa fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="confirm_new_password">Confirm New Password</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="confirm_new_password" name="confirm_new_password" required>
+                <div class="input-group-append">
+                  <button class="btn btn-outline-secondary toggle-password" type="button">
+                    <i class="fa fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+<!-- Add Address Modal -->
+  <div class="modal fade" id="addAddressModal" tabindex="-1" role="dialog" aria-labelledby="addAddressModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addAddressModalLabel">Add Address</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="addAddressForm" method="POST">
+            {% csrf_token %}
+            <!-- Address form fields -->
+            <div class="form-group">
+              <label for="address_line1">Address name</label>
+              <input type="text" class="form-control" id="address_line1" name="name" required>
+            </div>
+            <div class="form-group">
+              <label for="address_line2">Address</label>
+              <input type="text" class="form-control" id="address_line2" name="address_line" required>
+            </div>
+            <div class="form-group">
+              <label for="phone">Phone Number</label>
+              <input type="number" class="form-control" id="phone" name="phone" required>
+            </div>
+            <div class="form-group">
+              <label for="city">City</label>
+              <input type="text" class="form-control" id="city" name="city" required>
+            </div>
+            <div class="form-group">
+              <label for="state">State</label>
+              <input type="text" class="form-control" id="state" name="state" required>
+            </div>
+            <div class="form-group">
+              <label for="postal_code">Postal Code</label>
+              <input type="text" class="form-control" id="postal_code" name="postal_code" required>
+            </div>
+            <div class="form-group">
+              <label for="country">Country</label>
+              <input type="text" class="form-control" id="country" name="country" required>
+            </div>
+           
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- Edit Address Modal -->
+<div class="modal fade" id="editAddressModal" tabindex="-1" role="dialog" aria-labelledby="editAddressModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editAddressModalLabel">Edit Address</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="editAddressForm" method="POST">
+          {% csrf_token %}
+          <!-- Address form fields -->
+          <input type="hidden" id="edit_address_id" name="address_id">
+          <div class="form-group">
+            <label for="edit_address_name">Address name</label>
+            <input type="text" class="form-control" id="edit_address_name" name="name" required>
+          </div>
+          <div class="form-group">
+            <label for="edit_address_line">Address</label>
+            <input type="text" class="form-control" id="edit_address_line" name="address_line" required>
+          </div>
+          <div class="form-group">
+            <label for="edit_phone">Phone Number</label>
+            <input type="number" class="form-control" id="edit_phone" name="phone" required>
+          </div>
+          <div class="form-group">
+            <label for="edit_city">City</label>
+            <input type="text" class="form-control" id="edit_city" name="city" required>
+          </div>
+          <div class="form-group">
+            <label for="edit_state">State</label>
+            <input type="text" class="form-control" id="edit_state" name="state" required>
+          </div>
+          <div class="form-group">
+            <label for="edit_postal_code">Postal Code</label>
+            <input type="text" class="form-control" id="edit_postal_code" name="postal_code" required>
+          </div>
+          <div class="form-group">
+            <label for="edit_country">Country</label>
+            <input type="text" class="form-control" id="edit_country" name="country" required>
+          </div>
+         
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock%}
+
+{% block foot %}
+
+<script>
+  $(document).ready(function() {
+      // Handle click event for "change password?" link
+      $('#changePasswordLink').click(function(event) {
+          event.preventDefault(); // Prevent the default link behavior
+          // Show the change password modal
+          $('#changePasswordModal').modal('show');
+      });
+
+      // Function to toggle password visibility
+      $(".toggle-password").click(function() {
+          $(this).toggleClass("active");
+          var input = $(this).parent().prev("input");
+          if (input.attr("type") === "password") {
+              input.attr("type", "text");
+          } else {
+              input.attr("type", "password");
+          }
+      });
+
+      // Handle form submission for changing password
+      $('#changePasswordForm').submit(function(event) {
+          event.preventDefault(); // Prevent the default form submission
+          var formData = $(this).serialize(); // Serialize the form data
+
+          // Send an AJAX request to handle form submission
+          $.ajax({
+              type: 'POST', // Set the request type
+              url: '{% url "change-password" %}',
+              data: formData, // Pass the serialized form data
+              success: function(response) { // Handle the success response
+                  $('#changePasswordModal').modal('hide'); // Hide the change password modal
+                  // Show success message using SweetAlert
+                  Swal.fire({
+                      icon: 'success',
+                      title: 'Success',
+                      text: 'Password changed successfully',
+                      showConfirmButton: true,
+                      confirmButtonText: 'OK'
+                  }).then((result) => {
+                      if (result.isConfirmed) {
+                          location.reload(); // Reload the page to reflect changes
+                      }
+                  });
+              },
+              error: function(xhr, status, error) { // Handle errors
+                  console.error(xhr.responseText);
+                  // Handle the error here, such as displaying an error message to the user
+                  // For example:
+                  // alert('An error occurred while changing the password. Please try again later.');
+              }
+          });
+      });
+  });
+</script>
+
+
+<script>
+  // JavaScript to handle opening the modal when Add Address button is clicked
+  $(document).ready(function() {
+      $('#addAddressBtn').click(function() {
+          $('#addAddressModal').modal('show'); // Show the modal
+      });
+  });
+
+  // JavaScript to handle form submission asynchronously
+  $('#addAddressForm').submit(function(event) {
+      event.preventDefault();
+      var formData = $(this).serialize();
+      $.ajax({
+          type: 'POST',
+          url: '{% url "add-address" %}',
+          data: formData,
+          success: function(response) {
+              $('#addAddressModal').modal('hide');
+              location.reload(); // Reload the page to reflect changes
+          },
+          error: function(xhr, status, error) {
+              console.error(xhr.responseText);
+              // Handle the error here, such as displaying an error message to the user
+          }
+      });
+  });
+</script>
+
+<script>
+  $(document).ready(function() {
+    $('.edit-address-btn').click(function() {
+      var addressId = $(this).data('address-id');
+      var $addressCard = $(this).closest('.card');
+      var addressName = $addressCard.find('.address-name').text().trim();
+      var phone = $addressCard.find('.phone').text().trim();
+      var addressLine = $addressCard.find('.address-line').text().trim();
+      var city = $addressCard.find('.city').text().trim();
+      var state = $addressCard.find('.state').text().trim();
+      var postalCode = $addressCard.find('.postal-code').text().trim();
+      var country = $addressCard.find('.country').text().trim();
+
+      // Set values in the form fields of the edit address modal
+      $('#edit_address_id').val(addressId);
+      $('#edit_address_name').val(addressName);
+      $('#edit_phone').val(phone);
+      $('#edit_address_line').val(addressLine);
+      $('#edit_city').val(city);
+      $('#edit_state').val(state);
+      $('#edit_postal_code').val(postalCode);
+      $('#edit_country').val(country);
+
+      // Show the edit address modal
+      $('#editAddressModal').modal('show');
+  });
+
+// JavaScript to handle form submission asynchronously
+    $('#editAddressForm').submit(function(event) {
+      event.preventDefault();
+      var formData = $(this).serialize();
+      var addressId = $('#edit_address_id').val(); // Get the address ID from the hidden input field
+      formData += '&address_id=' + addressId; // Append the address ID to the form data
+
+      // Retrieve the address ID from the clicked button
+      var editAddressUrl = '{% url "edit-address" address_id=0 %}'.replace('0', addressId);
+
+      $.ajax({
+        type: 'POST',
+        url: editAddressUrl,
+        data: formData,
+        success: function(response) {
+          $('#editAddressModal').modal('hide');
+          location.reload(); // Reload the page to reflect changes
+        },
+        error: function(xhr, status, error) {
+          console.error(xhr.responseText);
+          // Handle the error here, such as displaying an error message to the user
+        }
+      });
+    });
+  });
+</script>
+
+<script>
+  //delete address btn
+  $(document).ready(function() {
+    $('.delete-address-btn').click(function(e) {
+        e.preventDefault(); // Prevent the default action of the link
+
+        // Get the address ID from the data attribute
+        var addressId = $(this).data('address-id');
+
+        // Send an AJAX request to delete the address
+        $.ajax({
+            type: 'POST',
+            url: '{% url "delete-address" 0 %}'.replace('0', addressId),
+            data: {
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                // Handle success, for example, remove the deleted address from the UI
+                $(`.delete-address-btn[data-address-id="${addressId}"]`).closest('.col-md-4').remove();
+            },
+            error: function(xhr, status, error) {
+                // Handle error
+                console.error(xhr.responseText);
+            }
+        });
+    });
+});
+
+</script>
+
+
+{% endblock %}

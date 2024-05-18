@@ -1,0 +1,391 @@
+{% extends 'sidebar.html' %}
+{% load static %}
+
+{% block head %} 
+    <title>Brand Manager</title> 
+    <style>
+        .ccontainer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        body {
+            color: #566787;
+            background: #f5f5f5;
+            font-family: 'Roboto', sans-serif;
+        }
+        .table-responsive {
+            margin: 30px 0;
+        }
+        .table-wrapper {
+            min-width: 1000px;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 1px 1px rgba(0,0,0,.05);
+        }
+        .table-title {
+            padding-bottom: 10px;
+            margin: 0 0 10px;
+            min-width: 100%;
+            text-align: center; /* Centered text */
+        }
+        .table-title h2 {
+            margin: 8px 0 0;
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .search-box {
+            position: relative;        
+            float: right;
+        }
+        .search-box input {
+            height: 34px;
+            border-radius: 20px;
+            padding-left: 35px;
+            border-color: #ddd;
+            box-shadow: none;
+        }
+        .search-box input:focus {
+            border-color: #3FBAE4;
+        }
+        .search-box i {
+            color: #a0a5b1;
+            position: absolute;
+            font-size: 19px;
+            top: 8px;
+            left: 10px;
+        }
+        table.table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        table.table th, table.table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center; /* Centered text */
+            width: 20%;
+        }
+        table.table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        table.table-striped tbody tr:nth-of-type(odd) {
+            background-color: #fcfcfc;
+        }
+        table.table-striped.table-hover tbody tr:hover {
+            background: #f5f5f5;
+        }
+        table.table th i {
+            font-size: 13px;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+        table.table td:last-child {
+            width: 130px;
+        }
+        table.table td a {
+            color: #a0a5b1;
+            display: inline-block;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+        table.table td a.view {
+            color: #03A9F4;
+        }
+        table.table td a.edit {
+            color: #FFC107;
+        }
+        table.table td a.delete {
+            color: #E34724;
+        }
+        table.table td i {
+            font-size: 19px;
+        }    
+        .pagination {
+            float: right;
+            margin: 0 0 5px;
+        }
+        .pagination li a {
+            border: none;
+            font-size: 95%;
+            width: 30px;
+            height: 30px;
+            color: #999;
+            margin: 0 2px;
+            line-height: 30px;
+            border-radius: 30px !important;
+            text-align: center;
+            padding: 0;
+        }
+        .pagination li a:hover {
+            color: #666;
+        }    
+        .pagination li.active a {
+            background: #03A9F4;
+        }
+        .pagination li.active a:hover {        
+            background: #0397d6;
+        }
+        .pagination li.disabled i {
+            color: #ccc;
+        }
+        .pagination li i {
+            font-size: 16px;
+            padding-top: 6px
+        }
+        .hint-text {
+            float: left;
+            margin-top: 6px;
+            font-size: 95%;
+        }
+        .add-brand-btn {
+            float: right;
+            margin-bottom: 10px;
+        }
+        .add-logo-col {
+            width: 150px;
+        }
+        .brand-logo img {
+            max-width: 50px;
+            max-height: 50px;
+            display: block; /* Center image */
+            margin: 0 auto; /* Center image */
+        }
+
+        /* Modal styles */
+        .modal-content {
+            max-width: 400px;
+            margin: auto;
+            margin-top: 50px; /* Adjust as needed */
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: #fff;
+            position: relative;
+        }
+
+        .modal-content .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .modal-content .form-group {
+            margin-bottom: 20px;
+        }
+
+        .modal-content label {
+            font-weight: bold;
+        }
+
+        .modal-content input[type="text"],
+        .modal-content input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        .modal-content button[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .modal-content button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+    </style>
+{% endblock %}
+
+
+{% block content %}
+<div class="container">
+    <div class="table-responsive">
+        <div class="add-brand-btn">
+            <button class="btn btn-dark" id="addBtn">Add Brand</button>
+        </div>
+        <h2 class="table-title">Brand Table</h2>
+
+
+{% if messages %}
+    {% for message in messages %}
+    {% if message.tags == 'success' %}
+       <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        {% elif message.tags == 'error' %}
+        <<div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        {% elif message.tags == 'info' %}
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+
+        <table class="table table-striped" id="brandTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Logo</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for brand in brands %}
+                <tr>
+                    <td>{{ brand.id }}</td>
+                    <td>{{ brand.name }}</td>
+                    <td class="brand-logo"><img src="{{ brand.logo.url }}" alt="{{ brand.name }}"></td>
+                    <td>
+                        <span style="font-weight: bold;">
+                            {% if brand.is_listed %}
+                                <p style="color: green;">Listed</p>
+                            {% else %} 
+                               <p style="color: red;"> Unlisted </p>
+                            {% endif %}
+                            
+                        </span>
+                    </td>
+                    <td> 
+                        <a class="btn btn-primary editBtn">Edit</a>
+                        {% if brand.is_listed %}
+                        <a class="btn btn-danger" href="{% url 'list-brand' brand.id %}">Unlist</a>
+                        {% else %}
+                        <a class="btn btn-success" href="{% url 'list-brand' brand.id %}">List</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal for adding brand -->
+<div id="addBrandModal" class="modal">
+    <div class="modal-content card add-modal">
+        <span class="close">&times;</span>
+        <h2>Add New Brand</h2>
+        <form method="POST" id="addBrandForm" action="{% url 'add-brand' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_name">Name:</label>
+                <input type="text" class="form-control" id="id_name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="id_logo">Logo:</label>
+                <input type="file" class="form-control" id="id_logo" name="logo" accept="image/*" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editBrandModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>centEdit Brand</h2>
+        <form id="editBrandForm" method="post">
+            {% csrf_token %}
+            <input type="hidden" id="editBrandId" name="id">
+            <div class="form-group">
+                <label for="editName">Name:</label>
+                <input type="text" id="editName" name="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="editLogo">Logo:</label>
+                <input type="file" id="editLogo" name="logo" class="form-control" accept="image/*">
+            </div>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    // Get the modal element
+    var addModal = document.getElementById("addBrandModal");
+    var editModal = document.getElementById("editBrandModal");
+
+    // Get the button that opens the modals
+    var addBtn = document.getElementById("addBtn");
+
+    // Get the <span> elements that close the modals
+    var addCloseBtn = addModal.querySelector(".close");
+    var editCloseBtn = editModal.querySelector(".close");
+
+    // When the user clicks the "Add Brand" button, open the "Add Brand" modal 
+    addBtn.onclick = function() {
+        addModal.style.display = "block";
+    }
+
+    // When the user clicks on the close button in the "Add Brand" modal, close the modal
+    addCloseBtn.onclick = function() {
+        addModal.style.display = "none";
+    }
+
+    // When the user clicks anywhere outside of the "Add Brand" modal, close it
+    window.onclick = function(event) {
+        if (event.target == addModal) {
+            addModal.style.display = "none";
+        }
+    }
+
+    // Get the button that opens the "Edit Brand" modal
+    var editBtns = document.getElementsByClassName("editBtn");
+
+    // When the user clicks the edit button, open the edit modal 
+    Array.from(editBtns).forEach(function(editBtn) {
+        editBtn.onclick = function() {
+            // Populate the edit modal fields with current brand data
+            var brandRow = this.closest("tr");
+            var brandId = brandRow.querySelector("td:first-child").innerText;
+            var brandName = brandRow.querySelector("td:nth-child(2)").innerText;
+
+            document.getElementById("editBrandId").value = brandId;
+            document.getElementById("editName").value = brandName;
+
+            // Display the edit modal
+            editModal.style.display = "block";
+        };
+    });
+
+
+    // When the user clicks on the close button in the "Edit Brand" modal, close the modal
+    editCloseBtn.onclick = function() {
+        editModal.style.display = "none";
+    }
+
+    // When the user clicks anywhere outside of the "Edit Brand" modal, close it
+    window.onclick = function(event) {
+        if (event.target == editModal) {
+            editModal.style.display = "none";
+        }
+    }
+</script>
+{% endblock %}

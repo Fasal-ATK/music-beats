@@ -2,13 +2,33 @@
 {% load static %}
 
     {% block head %} 
-
     <title>Category Manager</title> 
     <link rel="stylesheet" href="{% static '4admin/css/category_manager.css' %}">
-
     {% endblock %}
 
-    {% block content %}
+
+
+                {% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+    {% if message.tags == 'success' %}
+        <div class="alert alert-success" role="alert">
+            {{ message }}
+        </div>
+        {% elif message.tags == 'error' %}
+        <div class="alert alert-danger" role="alert">
+            {{ message }}
+        </div>
+        {% elif message.tags == 'info' %}
+        <div class="alert alert-info" role="alert">
+            {{ message }}
+        </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+
 <div class="container">
     <div class="top-right">
         <button class="btn btn-dark" id="addBtn">Add Category</button>
@@ -164,6 +184,5 @@
            }
        }
 </script>
-
 
     {% endblock %}

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: fit-content;
+            text-align: center;
+        }
+
+        .otp-input {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 20px;
+            margin: 10px;
+            text-align: center;
+            outline: none;
+        }
+
+        .otp-input:focus {
+            border-color: #007bff;
+        }
+
+        .submit-btn {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Enter OTP</h2>
+    <p>We have sent an OTP to your email. Please enter the 6-digit code below:</p>
+    <form id="otp-form" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="combined-otp" id="combined-otp" />
+        <input type="text" class="otp-input" maxlength="1" onkeypress="return onlyNumbers(event)" required autofocus>
+        <input type="text" class="otp-input" maxlength="1" onkeypress="return onlyNumbers(event)" required>
+        <input type="text" class="otp-input" maxlength="1" onkeypress="return onlyNumbers(event)" required>
+        <input type="text" class="otp-input" maxlength="1" onkeypress="return onlyNumbers(event)" required>
+        <input type="text" class="otp-input" maxlength="1" onkeypress="return onlyNumbers(event)" required>
+        <input type="text" class="otp-input" maxlength="1" onkeypress="return onlyNumbers(event)" required>
+        <br>
+        <button type="button" class="submit-btn" onclick="combineDigits()">Submit</button> <!-- Change type to button -->
+    </form>
+</div>
+
+<script>
+    function combineDigits() {
+        var otp = '';
+        var otpInputs = document.getElementsByClassName('otp-input');
+        for (var i = 0; i < otpInputs.length; i++) {
+            otp += otpInputs[i].value;
+        }
+        document.getElementById('combined-otp').value = otp; // Set the value of hidden input
+        document.getElementById('otp-form').submit(); // Submit the form
+    }
+
+    function onlyNumbers(event) {
+        var charCode = event.which ? event.which : event.keyCode;
+        if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+            return false;
+        }
+        return true;
+    }
+
+    document.addEventListener('input', function (e) {
+        var target = e.target;
+        var maxLength = parseInt(target.attributes.maxlength.value, 10);
+        var length = target.value.length;
+        if (length >= maxLength) {
+            var next = target;
+            while (next = next.nextElementSibling) {
+                if (next == null)
+                    break;
+                if (next.tagName.toLowerCase() === "input") {
+                    next.focus();
+                    break;
+                }
+            }
+        } else if (length === 0) {
+            var previous = target;
+            while (previous = previous.previousElementSibling) {
+                if (previous == null)
+                    break;
+                if (previous.tagName.toLowerCase() === "input") {
+                    previous.focus();
+                    break;
+                }
+            }
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        var target = e.target;
+        var maxLength = parseInt(target.attributes.maxlength.value, 10);
+        var keyCode = e.keyCode;
+        var length = target.value.length;
+        if (keyCode === 39 || keyCode === 40) { // Right arrow or down arrow
+            var next = target.nextElementSibling;
+            while (next) {
+                if (next == null)
+                    break;
+                if (next.tagName.toLowerCase() === "input") {
+                    next.focus();
+                    break;
+                }
+                next = next.nextElementSibling;
+            }
+        } else if (keyCode === 37 || keyCode === 38) { // Left arrow or up arrow
+            var previous = target.previousElementSibling;
+            while (previous) {
+                if (previous == null)
+                    break;
+                if (previous.tagName.toLowerCase() === "input") {
+                    previous.focus();
+                    break;
+                }
+                previous = previous.previousElementSibling;
+            }
+        } else if (keyCode === 8 && length === 0) { // Backspace key and current input is empty
+            var previous = target.previousElementSibling;
+            if (previous && previous.tagName.toLowerCase() === "input") {
+                previous.focus();
+            }
+        } else if ((keyCode >= 48 && keyCode <= 57) || (keyCode >= 96 && keyCode <= 105)) { // Numeric keys
+            if (length === 1) {
+                target.value = '';
+            }
+        }
+    });
+</script>
+
+</body>
+</html>

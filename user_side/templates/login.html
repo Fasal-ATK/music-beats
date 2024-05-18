@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Login</title>
 
     {% load static %}
 
@@ -43,21 +43,27 @@
                                     <input type="submit" name="signin" id="signin" class="form-submit" value="Log in"/>
                                 </div>
                                 {% if messages %}
-                                <ul style="color: red;">
-                                    {% for message in messages %}
-                                        <li {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-                                    {% endfor %}
-                                </ul>
-                                {% endif %}
+                                    <ul>
+                                        {% for message in messages %}
+                                            <li {% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                                                {% if message.tags == 'error' %}
+                                                    <span style="color: red;">{{ message }}</span>
+                                                {% else %}
+                                                    <span style="color: green;">{{ message }}</span>
+                                                {% endif %}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %} 
                             </form>
-                            <!-- <div class="social-login">
+                            <div class="social-login">
                                 <span class="social-label">Or login with</span>
                                 <ul class="socials">
                                     <li><a href="#"><i class="display-flex-center zmdi zmdi-facebook"></i></a></li>
                                     <li><a href="#"><i class="display-flex-center zmdi zmdi-twitter"></i></a></li>
                                     <li><a href="#"><i class="display-flex-center zmdi zmdi-google"></i></a></li>
                                 </ul>
-                            </div> -->
+                            </div>
                         </div>
                     </div>
                 </div>

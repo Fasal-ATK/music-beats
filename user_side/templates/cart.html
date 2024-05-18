@@ -1,0 +1,150 @@
+{% extends 'navbar.html' %}
+{% load static %}
+
+{% block head %}
+<title>Cart Page</title>
+{% endblock %}
+
+{% block body %}
+<!-- Start Banner Area -->
+<section class="banner-area organic-breadcrumb">
+    <div class="container">
+        <div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
+            <div class="col-first">
+                <h1>My Cart</h1>
+                <nav class="d-flex align-items-center">
+                    <a href="{% url 'home' %}">Home<span class="lnr lnr-arrow-right"></span></a>
+                    <a href="#">Cart</a>
+                </nav>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Banner Area -->
+
+<section class="cart_area">
+    <div class="container">
+        <div class="cart_inner">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Product</th>
+                            <th scope="col">Title</th>
+                            <th scope="col">Price</th>
+                            <th scope="col">Quantity</th>
+                            <th scope="col">Total</th>
+                            <th scope="col">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in cart_items %}
+                            <tr data-cartitem-id="{{ item.id }}">
+                                <td>
+                                    <div class="media">
+                                        <div class="d-flex">
+                                            <img src="{{ item.product.image.url }}" alt="{{ item.product.title }}" style="width: 80px;">
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="media-body">
+                                        <p>{{ item.product.title }}</p>
+                                    </div>
+                                </td>
+                                <td>
+                                    <h5>{{ item.product.price }}</h5>
+                                </td>
+                                <td>
+                                    <div class="product_count">
+                                        <input type="number" name="qty" min="1" max="10" value="{{ item.quantity }}" class="input-text qty" data-prev-qty="{{ item.quantity }}">
+                                    </div>
+                                </td>
+                                <td>
+                                    <h5 class="item-total">= {{ item.total_price }}</h5>
+                                </td>
+                                <td>
+                                    <button class="btn btn-danger remove-cart-item" data-cartitem-id="{{ item.id }}">Remove</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        <tr>
+                            <td colspan="4"></td>
+                            <td>
+                                <h5>Sub total = <span id="total_price">{{ total_price }} rs</span></h5>
+                            </td>
+                        </tr>
+                        <tr class="out_button_area">
+                            <td colspan="4"></td>
+                            <td >
+                                <div class="checkout_btn_inner d-flex align-items-center">
+                                    <a class="gray_btn" href="{% url 'shop' %}">Continue Shopping</a>
+                                    <a class="primary-btn" href="{% url 'checkout' %}">Proceed to checkout</a>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- JavaScript to handle the AJAX requests -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('.qty').change(function() {
+        let $input = $(this);
+        let $row = $input.closest('tr');
+        let cartitemId = $row.data('cartitem-id');
+        let qty = $input.val();
+        let prevQty = $input.data('prev-qty');
+
+        $.ajax({
+            url: "{% url 'update-cart' 0 %}".slice(0, -2) + cartitemId + '/',
+            type: 'POST',
+            data: {
+                'qty': qty,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    $input.data('prev-qty', qty);  // Update the previous quantity value
+                    $row.find('.item-total').text(response.item_total);
+                    $('#total_price').text(response.total_price);
+                } else {
+                    alert(response.message);
+                    $input.val(prevQty);  // Restore the previous quantity value
+                }
+            }
+        });
+    });
+
+    $('.remove-cart-item').click(function(e) {
+        e.preventDefault();
+        let cartitemId = $(this).data('cartitem-id');
+        let $row = $(this).closest('tr');
+
+        $.ajax({
+            url: "{% url 'remove-cart' 0 %}".slice(0, -2) + cartitemId + '/',
+            type: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    $row.remove();
+                    $('#total_price').text(response.total_price);
+                } else {
+                    alert(response.message);
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% block foot %}
+{% endblock %}

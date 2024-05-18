@@ -1,0 +1,60 @@
+{% extends 'sidebar.html' %}
+
+{% load static %}
+
+{% block head %} 
+<title>Order Manager</title> 
+{% endblock %}
+
+{% block content %}
+<!-- Container Main start -->
+<div class="container">
+    <div class="row">
+        <div class="col-lg-12">
+            <h2>Order Manager</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>User Name</th>
+                        <th>Products</th>
+                        <th>Total Price</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- {% for order in orders %}
+                    <tr>
+                        <td>{{ order.id }}</td>
+                        <td>{{ order.user.username }}</td>
+                        <td>
+                            <ul>
+                                {% for item in order.orderitem_set.all %}
+                                <li>{{ item.product.title }} x {{ item.quantity }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td>{{ order.total_price }}</td>
+                        <td>{{ order.get_status_display }}</td>
+                        <td>
+                            <a href="{% url 'order_detail' order.id %}" class="btn btn-primary">View</a>
+                            {% if order.status == 'pending' %}
+                            <form action="{% url 'change_order_status' order.id %}" method="post" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success">Mark as Completed</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %} -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<!-- Container Main end -->
+{% endblock %}
+
+{% block script %}
+{% endblock %}
