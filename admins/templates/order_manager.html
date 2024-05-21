@@ -2,8 +2,84 @@
 
 {% load static %}
 
-{% block head %} 
-<title>Order Manager</title> 
+{% block head %}
+<title>Order Manager</title>
+<style>
+    /* Add your custom CSS styles here */
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th,
+    .table td {
+        border: 3px solid #9f8f8f;
+        padding: 12px;
+        text-align: left;
+    }
+
+    .table th {
+        background-color: #4CAF50;
+        color: black; /* Changed to black */
+    }
+
+    .table tbody tr:nth-child(even) {
+        background-color: #e3e3e3;
+    }
+
+    .table tbody tr:hover {
+        background-color: #8a7e7e;
+    }
+
+    .btn {
+        padding: 8px 12px;
+        border: none;
+        background-color: #007bff;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    .status-select {
+        width: 100%;
+        padding: 5px;
+        border-radius: 4px;
+        border: 2px solid #928f8f;
+    }
+
+    .status-order_placed {
+        color: black;
+    }
+
+    .status-shipped {
+        color: orange;
+    }
+
+    .status-out_for_delivery {
+        color: blue;
+    }
+
+    .status-completed {
+        color: green;
+    }
+
+    .status-canceled {
+        color: red;
+    }
+
+    .status-returned {
+        color: purple;
+    }
+
+    .status-refunded {
+        color: brown;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -17,37 +93,33 @@
                     <tr>
                         <th>Order ID</th>
                         <th>User Name</th>
-                        <th>Products</th>
                         <th>Total Price</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- {% for order in orders %}
+                    {% for order in orders %}
                     <tr>
                         <td>{{ order.id }}</td>
                         <td>{{ order.user.username }}</td>
+                        <td>${{ order.total_price }}</td>
                         <td>
-                            <ul>
-                                {% for item in order.orderitem_set.all %}
-                                <li>{{ item.product.title }} x {{ item.quantity }}</li>
-                                {% endfor %}
-                            </ul>
+                            <select class="status-select" data-order-id="{{ order.id }}" onchange="updateSelectColor(this)">
+                                <option value="order_placed" {% if order.order_status == "order_placed" %} selected {% endif %}>Order Placed</option>
+                                <option value="shipped" {% if order.order_status == "shipped" %} selected {% endif %}>Shipped</option>
+                                <option value="out_for_delivery" {% if order.order_status == "out_for_delivery" %} selected {% endif %}>Out for Delivery</option>
+                                <option value="completed" {% if order.order_status == "completed" %} selected {% endif %}>Completed</option>
+                                <option value="canceled" {% if order.order_status == "canceled" %} selected {% endif %}>Canceled</option>
+                                <option value="returned" {% if order.order_status == "returned" %} selected {% endif %}>Returned</option>
+                                <option value="refunded" {% if order.order_status == "refunded" %} selected {% endif %}>Refunded</option>
+                            </select>
                         </td>
-                        <td>{{ order.total_price }}</td>
-                        <td>{{ order.get_status_display }}</td>
                         <td>
-                            <a href="{% url 'order_detail' order.id %}" class="btn btn-primary">View</a>
-                            {% if order.status == 'pending' %}
-                            <form action="{% url 'change_order_status' order.id %}" method="post" style="display: inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-success">Mark as Completed</button>
-                            </form>
-                            {% endif %}
+                            <a href="{% url 'orders-detail' order.id %}" class="btn btn-primary">View Details</a>
                         </td>
                     </tr>
-                    {% endfor %} -->
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
@@ -57,4 +129,47 @@
 {% endblock %}
 
 {% block script %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+function updateSelectColor(select) {
+    const status = select.value;
+    select.className = 'status-select status-' + status;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.status-select').forEach(function(select) {
+        updateSelectColor(select); // Initialize color on page load
+        select.addEventListener('change', function() {
+            var orderId = this.getAttribute('data-order-id');
+            var status = this.value;
+            console.log("Order ID:", orderId);
+            console.log("Selected Status:", status);
+
+            fetch("{% url 'update-order-status' %}", {  // Corrected URL
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}' // Ensure the CSRF token is included
+                },
+                body: JSON.stringify({
+                    'order_id': orderId,
+                    'status': status
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Order status updated successfully.');
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Fetch Error:", error);
+                alert('An error occurred while updating the order status.');
+            });
+        });
+    });
+});
+</script>
 {% endblock %}

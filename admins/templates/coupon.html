@@ -1,0 +1,145 @@
+{% extends 'sidebar.html' %}
+
+{% load static %}
+
+{% block head %} 
+<title>Coupon Manager</title> 
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Coupon Manager</h2>
+    <button type="button" class="btn btn-primary mb-3" id="addCouponBtn">
+        Add Coupon
+    </button>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Coupon Code</th>
+                <th>Created At</th>
+                <th>Expire Date</th>
+                <th>Discount Price</th>
+                <th>Minimum Amount</th>
+                <th>Active</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for coupon in coupons %}
+            <tr>
+                <td>{{ coupon.coupon_code }}</td>
+                <td>{{ coupon.created_at }}</td>
+                <td>{{ coupon.expire_date }}</td>
+                <td>{{ coupon.discount_price }}</td>
+                <td>{{ coupon.minimum_amount }}</td>
+                <td>{{ coupon.active }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add Coupon Modal -->
+<div id="addCouponModal" class="modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Coupon</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" id="addCouponForm" action="{% url 'add-coupon' %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="coupon_code">Coupon Code</label>
+                        <input type="text" class="form-control" id="coupon_code" name="coupon_code" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="expire_date">Expire Date</label>
+                        <input type="datetime-local" class="form-control" id="expire_date" name="expire_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="discount_price">Discount Price</label>
+                        <input type="number" class="form-control" id="discount_price" name="discount_price" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="minimum_amount">Minimum Amount</label>
+                        <input type="number" class="form-control" id="minimum_amount" name="minimum_amount" required>
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input" id="active" name="active" checked>
+                        <label class="form-check-label" for="active">Active</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Coupon</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+    // Function to show success message in modal
+    function showSuccessMessage(message) {
+        var successMessage = '<div class="alert alert-success" role="alert">' + message + '</div>';
+        $('.modal-body').html(successMessage);
+    }
+
+    // Get the modal element
+    var addCouponModal = document.getElementById("addCouponModal");
+
+    // Get the button that opens the modal
+    var addCouponBtn = document.getElementById("addCouponBtn");
+
+    // Get the <span> element that closes the modal
+    var closeBtn = addCouponModal.querySelector(".close");
+
+    // When the user clicks the button, open the modal 
+    addCouponBtn.onclick = function() {
+        addCouponModal.style.display = "block";
+    }
+
+    // When the user clicks on <span> (x), close the modal
+    closeBtn.onclick = function() {
+        addCouponModal.style.display = "none";
+    }
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == addCouponModal) {
+            addCouponModal.style.display = "none";
+        }
+    }
+
+    // Handle form submission
+    $('#addCouponForm').submit(function(event) {
+        event.preventDefault(); // Prevent default form submission
+
+        // Submit form via AJAX
+        $.ajax({
+            type: 'POST',
+            url: $(this).attr('action'),
+            data: $(this).serialize(),
+            success: function(response) {
+                if (response.success) {
+                    showSuccessMessage('Coupon added successfully!');
+                } else {
+                    // Handle error
+                    alert(response.error || 'An error occurred.');
+                }
+            },
+            error: function() {
+                alert('An error occurred.');
+            }
+        });
+    });
+</script>
+{% endblock %}
+

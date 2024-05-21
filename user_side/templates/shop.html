@@ -2,272 +2,221 @@
 
 {% load static %}
 
-		{% block head %}
-
-<title>shop</title>
-
-		{% endblock%}
-			
-
-		{% block body %} 
-
- 	<!-- Start Banner Area -->
-	<section class="banner-area organic-breadcrumb">
-		<div class="container">
-			<div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
-				<div class="col-first">
-					<h1>Product Shop</h1>
-					<nav class="d-flex align-items-center">
-						<a href="index.html">Home<span class="lnr lnr-arrow-right"></span></a>
-						<a href="#">Shop<span class="lnr lnr-arrow-right"></span></a>
-					</nav>
-				</div>
-			</div>
-		</div>
-	</section>
-
+{% block head %}
+<title>Shop</title>
+<style>
+	.sidebar-categories {
+		background-color: #f9f9f9;
+		padding: 20px;
+		border-radius: 5px;
+		box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+	}
 	
-   <center>{% if messages %}
+	.main-categories {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+	
+	.main-nav-list {
+		margin-bottom: 10px;
+	}
+	
+	.main-nav-list input[type="radio"] {
+		display: none; /* Hide the radio button */
+	}
+	
+	.main-nav-list label {
+		display: inline-block;
+		padding: 10px 20px;
+		border-radius: 3px;
+		background-color: #fff;
+		color: #333;
+		border: 1px solid #ccc;
+		cursor: pointer;
+	}
+	
+	.main-nav-list label:hover {
+		background-color: #f0f0f0;
+	}
+	
+	.main-nav-list input[type="radio"]:checked + label {
+		background-color: #007bff;
+		color: #fff;
+		border-color: #007bff;
+	}
+</style>
+{% endblock %}
+
+{% block body %}
+<!-- Start Banner Area -->
+<section class="banner-area organic-breadcrumb">
+    <div class="container">
+        <div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
+            <div class="col-first">
+                <h1>Shop Category page</h1>
+                <nav class="d-flex align-items-center">
+                    <a href="{% url 'home' %}">Home<span class="lnr lnr-arrow-right"></span></a>
+                    <a href="#">Shop<span class="lnr lnr-arrow-right"></span></a>
+                    <a href="#">Fashion Category</a>
+                </nav>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Display Messages -->
+<center>
+    {% if messages %}
     {% for message in messages %}
         {% if message.tags == 'error' %}
             <div class="alert alert-danger" role="alert">
                 {{ message }}
             </div>
-        {% else  %}
+        {% else %}
             <div class="alert alert-success" role="alert">
                 {{ message }}
             </div>
         {% endif %}
     {% endfor %}
-    {% endif %}</center> 
+    {% endif %}
+</center>
 
+<!-- End Banner Area -->
+<div class="container">
+    <div class="row">
+        <div class="col-xl-3 col-lg-4 col-md-5">
+            <div class="sidebar-categories">
+                <div class="head">Browse Categories</div>
+                <ul class="main-categories">
+                    <form method="get" id="category-form">
+                        <li class="main-nav-list">
+                            <a href="{% url 'shop' %}">All Categories</a>
+                        </li>
+                        {% for c in category %}
+                        <li class="main-nav-list">
+                            <input type="radio" id="category{{ c.id }}" name="category" value="{{ c.id }}" {% if selected_category == c.id|stringformat:"s" %}checked{% endif %} onchange="document.getElementById('category-form').submit();">
+                            <label for="category{{ c.id }}">{{ c.name }}</label>
+                        </li>
+                        {% endfor %}
+                    </form>
+                </ul>
+            </div>
+        </div>
+        <div class="col-xl-9 col-lg-8 col-md-7">
+            <!-- Start Filter Bar -->
+            <div class="filter-bar d-flex flex-wrap align-items-center">
+                <div class="sorting mr-auto">
+                    <form method="get" id="sort-form">
+                        {% if selected_category %}
+                        <input type="hidden" name="category" value="{{ selected_category }}">
+                        {% endif %}
+                        <select name="sort_by" onchange="document.getElementById('sort-form').submit();">
+                            <option value="">Default sorting</option>
+                            <option value="name_asc" {% if sort_by == 'name_asc' %}selected{% endif %}>Name A-Z</option>
+                            <option value="name_desc" {% if sort_by == 'name_desc' %}selected{% endif %}>Name Z-A</option>
+                            <option value="price_asc" {% if sort_by == 'price_asc' %}selected{% endif %}>Price Low to High</option>
+                            <option value="price_desc" {% if sort_by == 'price_desc' %}selected{% endif %}>Price High to Low</option>
+                        </select>
+                    </form>
+                </div>
+                <div class="pagination">
+                    <a href="#" class="prev-arrow"><i class="fa fa-long-arrow-left" aria-hidden="true"></i></a>
+                    <a href="#" class="active">1</a>
+                    <a href="#">2</a>
+                    <a href="#">3</a>
+                    <a href="#" class="dot-dot"><i class="fa fa-ellipsis-h" aria-hidden="true"></i></a>
+                    <a href="#">6</a>
+                    <a href="#" class="next-arrow"><i class="fa fa-long-arrow-right" aria-hidden="true"></i></a>
+                </div>
+            </div>
+            <!-- End Filter Bar -->
+            <!-- Start Best Seller -->
+            <section class="lattest-product-area pb-40 category-list">
+                <div class="row">
+                    <!-- single product -->
+                    {% for p in product %}
+                    <div class="col-lg-4 col-md-6">
+                        <div class="single-product">
+                            <a href="#" class="product-preview" data-toggle="modal" data-target="#exampleModal" data-product-id="{{ p.id }}">
+                                <img class="img-fluid" src="{{ p.image.url }}" alt="{{ p.title }}" style="width: 220px; height: 240px; object-fit: cover;">
+                            </a>
+                            <div class="product-details">
+                                <h6>{{ p.title }}</h6>
+                                <div class="price">
+                                    <h6>rs.{{ p.price }}</h6>
+                                </div>
+                                <div class="prd-bottom">
+                                    <a href="{% url 'add-cart' p.id %}" class="social-info">
+                                        <span class="ti-bag"></span>
+                                        <p class="hover-text">add to bag</p>
+                                    </a>
+                                    <a href="{% url 'add-wishlist-item' p.id %}" class="social-info">
+                                        <span class="lnr lnr-heart"></span>
+                                        <p class="hover-text">Wishlist</p>
+                                    </a>
+                                    <a href="{% url 'single' p.id %}" class="social-info">
+                                        <span class="lnr lnr-move"></span>
+                                        <p class="hover-text">view more</p>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            <!-- End Best Seller -->
+        </div>
+    </div>
+</div>
 
-	<!-- End Banner Area -->
-	<div class="container">
-		<div class="row">
-			<div class="col-xl-3 col-lg-4 col-md-5">
-				<div class="sidebar-categories">
-					<div class="head">Browse Categories</div>
-					<ul class="main-categories">
-						{% for c in category %}
-						<li class="main-nav-list"><a data-toggle="collapse" href="#fruitsVegetable" aria-expanded="false" aria-controls="fruitsVegetable"><span
-								 class="lnr lnr-arrow-right"></span>{{c.name}}<span class="number">(53)</span></a>
-						 {% endfor %}
-							<ul class="collapse" id="fruitsVegetable" data-toggle="collapse" aria-expanded="false" aria-controls="fruitsVegetable">
-								<li class="main-nav-list child"><a href="#">Frozen Fish<span class="number">(13)</span></a></li>
-							</ul>
-						</li>
-					</ul>
-				</div>
-				<div class="sidebar-filter mt-50">
-					<div class="top-filter-head">Product Filters</div>
-					<div class="common-filter">
-						<div class="head">Brands</div>
-						<form action="#">
-							<ul>
-								<li class="filter-list"><input class="pixel-radio" type="radio" id="apple" name="brand"><label for="apple">Apple<span>(29)</span></label></li>
-								<li class="filter-list"><input class="pixel-radio" type="radio" id="asus" name="brand"><label for="asus">Asus<span>(29)</span></label></li>
-								<li class="filter-list"><input class="pixel-radio" type="radio" id="gionee" name="brand"><label for="gionee">Gionee<span>(19)</span></label></li>
-								<li class="filter-list"><input class="pixel-radio" type="radio" id="micromax" name="brand"><label for="micromax">Micromax<span>(19)</span></label></li>
-								<li class="filter-list"><input class="pixel-radio" type="radio" id="samsung" name="brand"><label for="samsung">Samsung<span>(19)</span></label></li>
-							</ul>
-						</form>
-					</div>
-					<!-- <div class="common-filter">
-						<div class="head">Color</div>
-						<form action="#">
-							<ul>
-								<li class="filter-list"><input class="pixel-radio" type="radio" id="black" name="color"><label for="black">Black<span>(29)</span></label></li>
-								<li class="filter-list"><input class="pixel-radio" type="radio" id="balckleather" name="color"><label for="balckleather">Black
-										Leather<span>(29)</span></label></li>
-								<li class="filter-list"><input class="pixel-radio" type="radio" id="blackred" name="color"><label for="blackred">Black
-										with red<span>(19)</span></label></li>
-								<li class="filter-list"><input class="pixel-radio" type="radio" id="gold" name="color"><label for="gold">Gold<span>(19)</span></label></li>
-								<li class="filter-list"><input class="pixel-radio" type="radio" id="spacegrey" name="color"><label for="spacegrey">Spacegrey<span>(19)</span></label></li>
-							</ul>
-						</form>
-					</div> -->
-					<div class="common-filter">
-						<div class="head">Price</div>
-						<div class="price-range-area">
-							<div id="price-range"></div>
-							<div class="value-wrapper d-flex">
-								<div class="price">Price:</div>
-								<span>$</span>
-								<div id="lower-value"></div>
-								<div class="to">to</div>
-								<span>$</span>
-								<div id="upper-value"></div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="col-xl-9 col-lg-8 col-md-7">
-				<!-- Start Filter Bar -->
-				<div class="filter-bar d-flex flex-wrap align-items-center">
-					<div class="sorting">
-						<select>
-							<option value="1">Default sorting</option>
-							<option value="1">Default sorting</option>
-							<option value="1">Default sorting</option>
-						</select>
-					</div>
-					<div class="sorting mr-auto">
-						<select>
-							<option value="1">Show 12</option>
-							<option value="1">Show 12</option>
-							<option value="1">Show 12</option>
-						</select>
-					</div>
-					<div class="pagination">
-						<a href="#" class="prev-arrow"><i class="fa fa-long-arrow-left" aria-hidden="true"></i></a>
-						<a href="#" class="active">1</a>
-						<a href="#">2</a>
-						<a href="#">3</a>
-						<a href="#" class="dot-dot"><i class="fa fa-ellipsis-h" aria-hidden="true"></i></a>
-						<a href="#">6</a>
-						<a href="#" class="next-arrow"><i class="fa fa-long-arrow-right" aria-hidden="true"></i></a>
-					</div>
-				</div>
-				<!-- End Filter Bar -->
-				<!-- Start Best Seller -->
-				<section class="lattest-product-area pb-40 category-list">
-					<div class="row">
+<!-- Modal Quick Product View -->
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="container relative">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <div class="product-quick-view">
+                <div class="row align-items-center">
+                    <div class="col-lg-6">
+                        <div class="quick-view-carousel">
+                            <div class="item" id="quick-view-image">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="quick-view-content" id="quick-view-content">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-						<!-- single product -->
-						
-						{% for p in product %}
-				<div class="col-lg-4 col-md-6">
-					<div class="single-product">
-						<img class="img-fluid" src="{{ p.image.url }}" alt="{{ p.title }}" style="width: 200px; height: 220px; object-fit: cover;">
-						<div class="product-details">
-							<h6>{{ p.title }}</h6>
-							<div class="price">
-								<h6>rs.{{ p.price }}</h6>
-								<!-- <h6 class="l-through">$210.00</h6> -->
-							</div>
-							<div class="prd-bottom" >
-								<a href="{% url 'add-cart' p.id %}" class="social-info">
-									<span class="ti-bag"></span>
-									<p class="hover-text">add to bag</p>
-								</a>
-								<a href="" class="social-info">
-									<span class="lnr lnr-heart"></span>
-									<p class="hover-text">Wishlist</p>
-								</a>
-								<a href="{% url 'single' p.id %}" class="social-info">
-									<span class="lnr lnr-move"></span>
-									<p class="hover-text">view more</p>
-								</a>
-							</div>
-						</div>
-					</div>
-				</div>
-				{% endfor %}
+<script>
+    $(document).ready(function () {
+        $('.product-preview').click(function (e) {
+            e.preventDefault();
+            var productId = $(this).data('product-id');
+            $.ajax({
+                url: '/get_product_details/',
+                type: 'GET',
+                data: {
+                    'product_id': productId
+                },
+                success: function (response) {
+                    $('#quick-view-content').html(response);
+                }
+            });
+        });
+    });
+</script>
 
-						
-					</div>
-				</section>
-				<!-- End Best Seller -->
-				<!-- Start Filter Bar -->
-				<!-- <div class="filter-bar d-flex flex-wrap align-items-center">
-					<div class="sorting mr-auto">
-						<select>
-							<option value="1">Show 12</option>
-							<option value="1">Show 12</option>
-							<option value="1">Show 12</option>
-						</select>
-					</div>
-					<div class="pagination">
-						<a href="#" class="prev-arrow"><i class="fa fa-long-arrow-left" aria-hidden="true"></i></a>
-						<a href="#" class="active">1</a>
-						<a href="#">2</a>
-						<a href="#">3</a>
-						<a href="#" class="dot-dot"><i class="fa fa-ellipsis-h" aria-hidden="true"></i></a>
-						<a href="#">6</a>
-						<a href="#" class="next-arrow"><i class="fa fa-long-arrow-right" aria-hidden="true"></i></a>
-					</div>
-				</div>
-				 End Filter Bar -->
-			</div>
-		</div>
-	</div>
+{% endblock %}
 
-	<!-- Start related-product Area -->
-
-		<!-- Modal Quick Product View -->
-		<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-hidden="true">
-			<div class="modal-dialog" role="document">
-				<div class="container relative">
-					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-						<span aria-hidden="true">&times;</span>
-					</button>
-					<div class="product-quick-view">
-						<div class="row align-items-center">
-							<div class="col-lg-6">
-								<div class="quick-view-carousel">
-									<div class="item" style="background: url(img/organic-food/q1.jpg);">
-	
-									</div>
-									<div class="item" style="background: url(img/organic-food/q1.jpg);">
-	
-									</div>
-									<div class="item" style="background: url(img/organic-food/q1.jpg);">
-	
-									</div>
-								</div>
-							</div>
-							<!-- <div class="col-lg-6">
-								<div class="quick-view-content">
-									<div class="top">
-										<h3 class="head">Mill Oil 1000W Heater, White</h3>
-										<div class="price d-flex align-items-center"><span class="lnr lnr-tag"></span> <span class="ml-10">$149.99</span></div>
-										<div class="category">Category: <span>Household</span></div>
-										<div class="available">Availibility: <span>In Stock</span></div>
-									</div>
-									<div class="middle">
-										<p class="content">Mill Oil is an innovative oil filled radiator with the most modern technology. If you are
-											looking for something that can make your interior look awesome, and at the same time give you the pleasant
-											warm feeling during the winter.</p>
-										<a href="#" class="view-full">View full Details <span class="lnr lnr-arrow-right"></span></a>
-									</div>
-									<div class="bottom">
-										<div class="color-picker d-flex align-items-center">Color:
-											<span class="single-pick"></span>
-											<span class="single-pick"></span>
-											<span class="single-pick"></span>
-											<span class="single-pick"></span>
-											<span class="single-pick"></span>
-										</div>
-										<div class="quantity-container d-flex align-items-center mt-15">
-											Quantity:
-											<input type="text" class="quantity-amount ml-15" value="1" />
-											<div class="arrow-btn d-inline-flex flex-column">
-												<button class="increase arrow" type="button" title="Increase Quantity"><span class="lnr lnr-chevron-up"></span></button>
-												<button class="decrease arrow" type="button" title="Decrease Quantity"><span class="lnr lnr-chevron-down"></span></button>
-											</div>
-	
-										</div>
-										<div class="d-flex mt-20">
-											<a href="#" class="view-btn color-2"><span>Add to Cart</span></a>
-											<a href="#" class="like-btn"><span class="lnr lnr-layers"></span></a>
-											<a href="#" class="like-btn"><span class="lnr lnr-heart"></span></a>
-										</div>
-									</div> 
-								</div>
-							</div> -->
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	
-	{% endblock%}
-
-
-
-
-	{% block foot %}
-
-	{% endblock %}
+{% block foot %}
+<!-- Any additional JavaScript or footer content can go here -->
+{% endblock %}

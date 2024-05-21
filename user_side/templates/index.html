@@ -203,7 +203,7 @@
                                     <span class="ti-bag"></span>
                                     <p class="hover-text">add to bag</p>
                                 </a>
-                                <a href="" class="social-info">
+                                <a href="{% url 'add-wishlist-item' p.id %}" class="social-info">
                                     <span class="lnr lnr-heart"></span>
                                     <p class="hover-text">Wishlist</p>
                                 </a>
@@ -249,7 +249,7 @@
                                     <p class="hover-text">add to bag</p>
                                 </a>
 
-                                <a href="" class="social-info">
+                                <a href="{% url 'add-wishlist-item' i.id %}" class="social-info">
                                     <span class="lnr lnr-heart"></span>
                                     <p class="hover-text">Wishlist</p>
                                 </a>

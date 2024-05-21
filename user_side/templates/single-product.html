@@ -37,13 +37,13 @@
 				<div class="col-lg-6">
 					<div class="s_Product_carousel">
 						<div class="single-prd-item">
-							<img class="img-fluid" src="{{ product.image.url }}" alt="" >
+							<img class="img-fluid" src="{{ product.image.url }}" alt="" style="width: 500px;" >
 						</div>
 						<div class="single-prd-item">
-							<img class="img-fluid" src="{{ product.image.url }}" alt="">
+							<img class="img-fluid" src="{{ product.image.url }}" alt="" style="width: 500px;" >
 						</div>
 						<div class="single-prd-item">
-							<img class="img-fluid" src="{{ product.image.url }}" alt="">
+							<img class="img-fluid" src="{{ product.image.url }}" alt="" style="width: 500px;" >
 						</div>
 					</div>
 				</div>
@@ -67,7 +67,7 @@
 						<div class="card_area d-flex align-items-center">
 							<a class="primary-btn" href="{% url 'add-cart' product.id %}">Add to Cart</a>
 							<!-- <a class="icon_btn" href="#"><i class="lnr lnr lnr-diamond"></i></a> -->
-							<a class="icon_btn" href="#"><i class="lnr lnr lnr-heart"></i></a>
+							<a class="icon_btn" href="{% url 'add-wishlist-item' product.id %}"><i class="lnr lnr lnr-heart"></i></a>
 						</div>
 					</div>
 				</div>
@@ -79,7 +79,7 @@
 	<!--================End Single Product Area =================-->
 
 	<!--================Product Description Area =================-->
-	<section class="product_description_area">
+	<!-- <section class="product_description_area">
 		<div class="container">
 			<ul class="nav nav-tabs" id="myTab" role="tablist">
 				<li class="nav-item">
@@ -400,7 +400,7 @@
 				</div>
 			</div>
 		</div>
-	</section>
+	</section> -->
 	<!--================End Product Description Area =================-->
 
 	<!-- Start related-product Area -->
@@ -409,27 +409,28 @@
 			<div class="row justify-content-center">
 				<div class="col-lg-6 text-center">
 					<div class="section-title">
-						<h1>Deals of the Week</h1>
-						<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore
-							magna aliqua.</p>
+						<h1>Related Products</h1>
+						<p></p>
 					</div>
 				</div>
 			</div>
 			<div class="row">
 				<div class="col-lg-9">
 					<div class="row">
+						{% for product in related_product %}
 						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
 							<div class="single-related-product d-flex">
-								<a href="#"><img src="img/r1.jpg" alt=""></a>
+								<a href="{% url 'single' product.id %}"><img src="{{product.image.url}}" alt="" style="width: 100px; height:100px;"></a>
 								<div class="desc">
-									<a href="#" class="title">Black lace Heels</a>
+									<a href="{% url 'single' product.id %}" class="title">{{product.title}}</a>
 									<div class="price">
-										<h6>$189.00</h6>
-										<h6 class="l-through">$210.00</h6>
+										<h6>{{product.price}}</h6>
+										<h6 class="l-through"></h6>
 									</div>
 								</div>
 							</div>
 						</div>
+						{% endfor %}
 						
 					</div>
 				</div>

@@ -1,0 +1,106 @@
+{% extends 'navbar.html' %}
+
+{% load static %}
+
+{% block head %}
+<title>Wishlist</title>
+{% endblock %}
+
+{% block body %}
+<!-- Start Banner Area -->
+<section class="banner-area organic-breadcrumb">
+    <div class="container">
+        <div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
+            <div class="col-first">
+                <h1>My Wishlist</h1>
+                <nav class="d-flex align-items-center">
+                    <a href="{% url 'home' %}">Home<span class="lnr lnr-arrow-right"></span></a>
+                    <a href="#">Wishlist</a>
+                </nav>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- End Banner Area -->
+
+<section class="wishlist_area">
+    <div class="container">
+        <div class="wishlist_inner">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Product</th>
+                            <th scope="col">Title</th>
+                            <th scope="col">Price</th>
+                            <th scope="col">Availability</th>
+                            <th scope="col">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in wishlist_items %}
+                            <tr data-wishlistitem-id="{{ item.id }}">
+                                <td>
+                                    <div class="media">
+                                        <div class="d-flex">
+                                            <img src="{{ item.product.image.url }}" alt="{{ item.product.title }}" style="width: 80px;">
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="media-body">
+                                        <p>{{ item.product.title }}</p>
+                                    </div>
+                                </td>
+                                <td>
+                                    <h5>{{ item.product.price }}</h5>
+                                </td>
+                                <td>
+                                    {% if item.product.is_in_stock %}
+                                        <span class="badge badge-success">In Stock</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">Out of Stock</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-danger remove-wishlist-item" data-wishlistitem-id="{{ item.id }}">Remove</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- JavaScript to handle the AJAX requests -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('.remove-wishlist-item').click(function(e) {
+        e.preventDefault();
+        let wishlistitemId = $(this).data('wishlistitem-id');
+        let $row = $(this).closest('tr');
+
+        $.ajax({
+            url: "{% url 'remove-wishlist-item' 0 %}".slice(0, -2) + wishlistitemId + '/',
+            type: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    $row.remove();
+                } else {
+                    alert(response.message);
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% block foot %}
+{% endblock %}

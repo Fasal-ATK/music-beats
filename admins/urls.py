@@ -28,6 +28,12 @@ urlpatterns = [
     path('list-brand/<int:b_id>',views.List_Brand,name='list-brand'),
 
     path('orders/',views.Order_Manager,name='orders'),
+    path('update-order-status/',views.Update_Order_Status,name='update-order-status'),
+    path('orders-detail/<int:order_id>',views.Orders_Detail,name='orders-detail'),
+
+    path('coupons/',views.Coupon_Manager,name='coupons'),
+    path('add-coupon/',views.Add_Coupon,name='add-coupon'),
+
 ]
 
 # fasal = 12345678

@@ -80,7 +80,7 @@
                             <td>{{ order.total_price }} rs</td>
                             <td>{{ order.order_date }}</td>
                             <td>{{ order.payment_method }}</td>
-                            <td>{% if order.is_complete %}Completed{% else %}Shipping{% endif %}</td>
+                            <td>{{order.order_status}}</td>
                             <td><a href="{% url 'order-details' order.id %}" class="btn btn-primary">View Details</a></td>
                         </tr>
                     {% endfor %}

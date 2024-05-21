@@ -1,15 +1,20 @@
-from django.shortcuts import render,redirect,get_object_or_404
-from django.contrib.auth import authenticate,login,logout
+import json
+from datetime import datetime
+
 from django.contrib import messages
-
-from .forms import CategoryForm,ProductForm,BrandForm
-from .models import Category,Product,Brand
-from user_side.models import Users
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseNotFound, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
 from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
-
+from .forms import CategoryForm, ProductForm, BrandForm
+from .models import Category, Product, Brand, Coupon
+from user_side.models import Users, Order, OrderItem, OrderAddress
 # Create your views here.
+
 
 #-------------------------------------------------- Admin_Login ----------------------------------------------------
 
@@ -210,4 +215,74 @@ def List_Brand(request,b_id):
 # -------------------------------------------------- order -------------------------------------------------
 
 def Order_Manager(request):
-    return render(request,'order_manager.html')
+    orders = Order.objects.all().order_by('-id')
+    return render(request, 'order_manager.html', {'orders': orders})
+
+
+@csrf_exempt
+def Update_Order_Status(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            order_id = data.get('order_id')
+            status = data.get('status')
+
+            try:
+                order = Order.objects.get(id=order_id)
+                order.order_status = status
+                order.save()
+                return JsonResponse({'success': True})
+            except Order.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Order not found.'})
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON'})
+    return JsonResponse({'success': False, 'message': 'Invalid request'})
+
+def Orders_Detail(request, order_id):
+    try:
+        order = Order.objects.select_related('user', 'address').get(id=order_id)
+        order_items = OrderItem.objects.filter(order=order)
+        order_address = OrderAddress.objects.get(order=order)
+        context = {
+            'order': order,
+            'order_items': order_items,
+            'order_address': order_address
+        }
+        return render(request, 'orders_details.html', context)
+    except Order.DoesNotExist:
+        return HttpResponseNotFound("Order not found")
+    except OrderAddress.DoesNotExist:
+        return HttpResponseNotFound("Order address not found")
+    
+
+# -------------------------------------------------- Coupon -------------------------------------------------
+
+
+def Coupon_Manager(request):
+    coupons = Coupon.objects.all()
+    return render(request, 'coupon.html', {'coupons': coupons})
+
+@csrf_protect
+def Add_Coupon(request):
+    if request.method == 'POST':
+        coupon_code = request.POST.get('coupon_code')
+        expire_date = request.POST.get('expire_date')
+        discount_price = request.POST.get('discount_price')
+        minimum_amount = request.POST.get('minimum_amount')
+        active = 'active' in request.POST
+        
+        expire_date = timezone.make_aware(datetime.strptime(expire_date, "%Y-%m-%dT%H:%M"))
+
+        try:
+            coupon = Coupon(
+                coupon_code=coupon_code,
+                expire_date=expire_date,
+                discount_price=discount_price,
+                minimum_amount=minimum_amount,
+                active=active
+            )
+            coupon.save()
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request'})

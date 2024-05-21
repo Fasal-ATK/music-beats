@@ -6,9 +6,10 @@ from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from django.template.loader import render_to_string
 
-from user_side.models import Users, Cart, CartItem, Address, Order, OrderItem, OrderAddress
-from admins.models import Product, Category
+from user_side.models import Users, Cart, CartItem, Address, Order, OrderItem, OrderAddress, Wishlist
+from admins.models import Coupon, Product, Category
 from user_side.forms import AddressForm
 
 
@@ -118,22 +119,62 @@ def Logout(request):
 def Shop(request):
     product = Product.objects.filter(is_listed=True)
     category = Category.objects.filter(is_listed=True)
-    return render(request, 'shop.html', {'product': product, 'category': category})
+
+    # Get sorting and category filter parameters from the request
+    sort_by = request.GET.get('sort_by')
+    selected_category = request.GET.get('category')
+
+    # Apply category filter if a category is selected
+    if selected_category:
+        product = product.filter(category__id=selected_category)
+
+    # Apply sorting based on the sort_by parameter
+    if sort_by == 'name_asc':
+        product = product.order_by('title')
+    elif sort_by == 'name_desc':
+        product = product.order_by('-title')
+    elif sort_by == 'price_asc':
+        product = product.order_by('price')
+    elif sort_by == 'price_desc':
+        product = product.order_by('-price')
+
+    return render(request, 'shop.html', {'product': product, 'category': category, 'sort_by': sort_by, 'selected_category': selected_category})
+
 
 # Single product view
 def Single_Product(request, id):
     product = get_object_or_404(Product, id=id)
-    return render(request, 'single-product.html', {'product': product})
+    related_product = Product.objects.filter(category = product.category)
+    return render(request, 'single-product.html', {'product': product,'related_product':related_product})
 
-# Cart page view
+def get_product_details(request):
+    if request.method == 'GET' and request.is_ajax():
+        product_id = request.GET.get('product_id')
+        product = get_object_or_404(Product, id=product_id)
+        # Assuming you have a template named 'product_details.html' to render the product details
+        html = render_to_string('product_details.html', {'product': product})
+        return JsonResponse({'html': html})
+    else:
+        return JsonResponse({'error': 'Invalid request'})
+#------------------------------------------- Cart -----------------------------
+
 @login_required(login_url='ulogin')
 def Cart_Page(request):
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = CartItem.objects.filter(cart=cart).order_by('-id')
     total_price = sum(item.product.price * item.quantity for item in cart_items)
-    return render(request, 'cart.html', {'cart_items': cart_items, 'total_price': total_price})
+    
+    # Get discounted price from session if available
+    discounted_price = request.session.get('discounted_price', total_price)
+    coupon_code = request.session.get('coupon_code', '')
 
-# Add to cart view
+    return render(request, 'cart.html', {
+        'cart_items': cart_items,
+        'total_price': total_price,
+        'discounted_price': discounted_price,
+        'coupon_code': coupon_code
+    })
+
 @login_required(login_url='ulogin')
 def Add_Cart(request, product_id):
     product = get_object_or_404(Product, id=product_id)
@@ -148,7 +189,6 @@ def Add_Cart(request, product_id):
     messages.success(request, "Product added to cart successfully.")
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
-# Remove from cart view
 @login_required(login_url='ulogin')
 def Remove_Cart(request, cartitem_id):
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -158,12 +198,14 @@ def Remove_Cart(request, cartitem_id):
             cart = cart_item.cart
             cart_items = CartItem.objects.filter(cart=cart)
             total_price = sum(item.product.price * item.quantity for item in cart_items)
+            # Remove coupon session data if items are removed
+            request.session.pop('discounted_price', None)
+            request.session.pop('coupon_code', None)
             return JsonResponse({'success': True, 'total_price': total_price})
         except CartItem.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Cart item does not exist'})
     return JsonResponse({'success': False, 'message': 'Invalid request'})
 
-# Update cart view
 @login_required(login_url='ulogin')
 def Update_Cart(request, cartitem_id):
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -177,12 +219,70 @@ def Update_Cart(request, cartitem_id):
                 cart_items = CartItem.objects.filter(cart=cart)
                 total_price = sum(item.product.price * item.quantity for item in cart_items)
                 item_total = cart_item.product.price * cart_item.quantity
+                # Remove coupon session data if cart is updated
+                request.session.pop('discounted_price', None)
+                request.session.pop('coupon_code', None)
                 return JsonResponse({'success': True, 'total_price': total_price, 'item_total': item_total})
             else:
                 return JsonResponse({'success': False, 'message': 'Quantity must be between 1 and 10 and within stock limits'})
         except CartItem.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Cart item does not exist'})
     return JsonResponse({'success': False, 'message': 'Invalid request'})
+
+@login_required(login_url='ulogin')
+def Apply_Coupon(request):
+    if request.method == 'POST':
+        coupon_code = request.POST.get('coupon_code')
+        total_price = float(request.POST.get('total_price', 0))
+        try:
+            coupon = Coupon.objects.get(coupon_code=coupon_code)
+            if not coupon.is_expired:
+                if total_price >= coupon.minimum_amount:
+                    discounted_price = total_price - coupon.discount_price
+                    # Store the discounted price and coupon code in the session
+                    request.session['discounted_price'] = discounted_price
+                    request.session['coupon_code'] = coupon_code
+                    return JsonResponse({'success': True, 'discounted_price': discounted_price})
+                else:
+                    return JsonResponse({'success': False, 'error': 'Total amount does not meet minimum requirement.'})
+            else:
+                return JsonResponse({'success': False, 'error': 'Coupon has expired.'})
+        except Coupon.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Coupon not found.'})
+    return JsonResponse({'success': False, 'error': 'Invalid request.'})
+
+
+
+#-------------------------------------------- Whishlist ---------------------------------------
+
+
+
+@login_required(login_url='ulogin')
+def Wishlist_Page(request):
+    wishlist_items = Wishlist.objects.filter(user=request.user)
+    return render(request, 'wishlist.html', {'wishlist_items': wishlist_items})
+
+@login_required(login_url='ulogin')
+def Add_Wishlist(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    wishlist_item, created = Wishlist.objects.get_or_create(user=request.user, product=product)
+    if created:
+        messages.success(request, "Product added to wishlist successfully.")
+    else:
+        messages.info(request, "Product is already in your wishlist.")
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+
+@login_required(login_url='ulogin')
+def Remove_Wishlist(request, wishlistitem_id):
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        try:
+            wishlist_item = Wishlist.objects.get(id=wishlistitem_id, user=request.user)
+            wishlist_item.delete()
+            return JsonResponse({'success': True})
+        except Wishlist.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Wishlist item does not exist'})
+    return JsonResponse({'success': False, 'message': 'Invalid request'})
+
 
 
 #-------------------------------------  Profile ------------------------------
@@ -318,6 +418,7 @@ def Place_Order(request):
     return redirect('checkout')
 
 
+
 #-------------------------------------  Order_Page ------------------------------
 
 
@@ -341,3 +442,8 @@ def Order_Details(request, order_id):
 @login_required(login_url='ulogin')
 def Order_Tracking(request):
     return render(request,'order_tracking.html')
+
+
+@login_required(login_url='ulogin')
+def Order_Cancelling(request,order_id):
+    return redirect('order-page')

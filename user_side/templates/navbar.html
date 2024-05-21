@@ -89,6 +89,8 @@
 							
 							<li class="nav-item {% if request.path == '/cart' %}active{% endif %}"><a href="{% url 'cart' %}" class="cart" id="cart-logo"><span class="ti-bag" ></span></a></li>
 
+							<li class="nav-item {% if request.path == '/wishlist/' %}active{% endif %}"><a href="{% url 'wishlist' %}" class="wishlist" id="wishlist-logo"><span class="ti-heart"></span></a></li>
+							
 							<li class="nav-item "><a href="{% url 'profile' %}" class="profile"><span class="ti-user" id="profile-logo"></span></a></li>
 
 							<li class="nav-item"><a class="search"><span class="lnr lnr-magnifier" id="search"></span></a></li>

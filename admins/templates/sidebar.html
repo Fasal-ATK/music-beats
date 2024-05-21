@@ -37,9 +37,11 @@
                         <a href="{% url 'user-mng' %}" class="nav_link {% if request.path == '/staff/user-mng/' %}active{% endif %}"> <i class='bx bx-user nav_icon'></i> <span class="nav_name">Users</span> </a>  
                         <a href="{% url 'category' %}" class="nav_link {% if request.path == '/staff/category/' %}active{% endif %}"> <i class='bx bx-grid-alt nav_icon'></i> <span class="nav_name">Categories</span> </a>
                         <a href="{% url 'product' %}" class="nav_link {% if request.path == '/staff/product/' %}active{% endif %}"> <i class='bx bx-shopping-bag nav_icon'></i> <span class="nav_name">Products</span> </a> 
-                        <a href="{% url 'brand' %}" class="nav_link {% if request.path == '/staff/brand/' %}active{% endif %}"> <i class='bx bx-badge-check nav_icon'></i> <span class="nav_name">Brands</span> </a>
+                        <!-- <a href="{% url 'brand' %}" class="nav_link {% if request.path == '/staff/brand/' %}active{% endif %}"> <i class='bx bx-badge-check nav_icon'></i> <span class="nav_name">Brands</span> </a> -->
                         <a href="{% url 'orders' %}" class="nav_link {% if request.path == '/staff/orders/' %}active{% endif %}"> <i class='bx bxs-truck nav_icon'></i><span class="nav_name">Orders</span> </a> 
-
+                        <a href="{% url 'coupons' %}" class="nav_link {% if request.path == '/staff/coupon/' %}active{% endif %}"><i class='bx bxs-coupon nav_icon'></i><span class="nav_name">Coupon</span>
+                        </a>
+                        
                     </div>
                 </div>
              <a href="{% url 'signout' %}" class="nav_link"> <i class='bx bx-log-out nav_icon'></i> <span class="nav_name">SignOut</span> </a>

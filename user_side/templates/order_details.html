@@ -28,7 +28,7 @@
     <div class="container">
         <div class="order_details_table">
             <h2>Ordered Items</h2> 
-            <h2 style="text-align: right;">Order Status: {{ order.is_complete|yesno:"Complete,Pending" }}</h2>
+            <h2 style="text-align: right;">Order Status: {{ order.order_status }}</h2>
             <table class="table">
                 <thead>
                     <tr>
