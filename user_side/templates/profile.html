@@ -50,7 +50,7 @@
                           
                             <tr>
                                 <th>Name :</th>
-                                <td><h6>{{request.user.username|capfirst}}</h6></td>
+                                <td><h6>{{request.user.username}}</h6></td>
                             </tr>
                             <tr>
                                 <th>Phone :</th>
@@ -61,8 +61,13 @@
                                 <td>{{request.user.email}}</td>
                             </tr>
                             <tr>
-                                <th></th>
-                                <td></td>
+                              <form action="" method="post">
+                                {% csrf_token %}
+                                <th>wallet :</th>
+                                 <td>{{wallet}}.rs <!-- Add Money Button -->
+                                  <a class="btn btn-primary ml-4" id="addMoneyBtn" style="color: white;">Add Money</a>
+                                  </td>
+                              </form>
                             </tr>
                         </table>
                         <a href="" class="pass" id="changePasswordLink" style="color: blue;">change password?</a>
@@ -142,6 +147,32 @@
       </div>
       
     </div>
+
+<!-- Add Money Modal -->
+<div class="modal fade" id="addMoneyModal" tabindex="-1" role="dialog" aria-labelledby="addMoneyModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addMoneyModalLabel">Add Money</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="addMoneyForm">
+          {% csrf_token %}
+          <!-- Amount input field -->
+          <div class="form-group">
+            <label for="amount">Amount</label>
+            <input type="number" class="form-control" id="amount" name="amount" required>
+          </div>
+          <button type="button" class="btn btn-primary" id="proceedToPaymentBtn">Proceed to Payment</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- Change Password Modal -->
 <div class="modal fade" id="changePasswordModal" tabindex="-1" role="dialog" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
@@ -302,6 +333,60 @@
 {% endblock%}
 
 {% block foot %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+  $(document).ready(function() {
+    // Open Add Money Modal
+    $('#addMoneyBtn').click(function() {
+      $('#addMoneyModal').modal('show');
+    });
+
+    // Proceed to Payment Button Clicked
+    $('#proceedToPaymentBtn').click(function() {
+      var amount = $('#amount').val(); // Get the entered amount
+      $('#addMoneyModal').modal('hide'); // Hide the Add Money modal
+      
+      // Open Razorpay modal and pass the amount
+      var options = {
+        key: 'rzp_test_NXuTzGqouVQtF6',
+        amount: amount * 100, // Amount is in currency subunits (e.g., cents)
+        currency: 'INR',
+        name: 'Your Company Name',
+        description: 'Add Money to Wallet',
+        handler: function(response) {
+          // Handle Razorpay payment success
+          alert('Payment Successful');
+          
+          // Send an AJAX request to add money
+          $.ajax({
+            type: 'POST',
+            url: '{% url "add-money" %}', // URL pattern name
+            data: {
+              csrfmiddlewaretoken: '{{ csrf_token }}',
+              amount: amount
+            },
+            success: function(response) {
+              // Handle success, if needed
+              alert('Money added successfully');
+              // Reload the page to reflect changes
+              location.reload();
+            },
+            error: function(xhr, status, error) {
+              // Handle error
+              console.error(xhr.responseText);
+              alert('An error occurred while adding money. Please try again.');
+            }
+          });
+        }
+      };
+      var rzp1 = new Razorpay(options);
+      rzp1.open();
+    });
+  });
+</script>
+
+
+
 
 <script>
   $(document).ready(function() {
@@ -358,7 +443,6 @@
       });
   });
 </script>
-
 
 <script>
   // JavaScript to handle opening the modal when Add Address button is clicked

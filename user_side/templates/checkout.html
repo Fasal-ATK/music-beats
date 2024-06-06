@@ -1,294 +1,363 @@
 {% extends 'navbar.html' %}
-
 {% load static %}
 
 {% block head %}
-
-<title> Checkout </title>
+<title>Checkout</title>
 <style>
     .payment-method,
-.address-selection {
-    margin-bottom: 20px;
-}
+    .address-selection {
+        margin-bottom: 20px;
+    }
 
-.payment-method select,
-.address-selection select {
-    width: 100%;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 10px;
-    font-size: 16px;
-}
+    .payment-method select,
+    .address-selection select {
+        width: 100%;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 10px;
+        font-size: 16px;
+    }
 
-.primary-btn {
-    background-color: #FFD700;
-    color: #000;
-    border: none;
-    border-radius: 5px;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-}
+    .primary-btn {
+        background-color: #FFD700;
+        color: #000;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+    }
 
-.primary-btn:hover {
-    background-color: #FFD700;
-    color: #000;
-}
-
+    .primary-btn:hover {
+        background-color: #FFD700;
+        color: #000;
+    }
 </style>
-
 {% endblock %}
 
-
-
 {% block body %}
+<section class="banner-area organic-breadcrumb">
+    <div class="container">
+        <div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
+            <div class="col-first">
+                <h1>Checkout</h1>
+                <nav class="d-flex align-items-center">
+                    <a href="{% url 'home' %}">Home<span class="lnr lnr-arrow-right"></span></a>
+                    <a href="#">Checkout</a>
+                </nav>
+            </div>
+        </div>
+    </div>
+</section>
 
-    <!-- Start Banner Area -->
-    <section class="banner-area organic-breadcrumb">
-        <div class="container">
-            <div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
-                <div class="col-first">
-                    <h1>Checkout</h1>
-                    <nav class="d-flex align-items-center">
-                        <a href="index.html">Home<span class="lnr lnr-arrow-right"></span></a>
-                        <a href="single-product.html">Checkout</a>
-                    </nav>
+<section class="checkout_area section_gap">
+    <div class="container">
+        <div class="billing_details">
+            <div class="row">
+                <div class="col-lg-7">
+                    <div class="billing_details">
+                        <h3>Products</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Product name</th>
+                                    <th>Image</th>
+                                    <th>Quantity</th>
+                                    <th>Per / Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart_items %}
+                                <tr>
+                                    <td>{{ item.product.title }}</td>
+                                    <td><img src="{{ item.product.image.url }}" style="width: 60px; height: 50px;"></td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>{{ item.product.price }}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr>
+                                    <td colspan="2"></td>
+                                    <td><strong>Total = </strong></td>
+                                    <td><u>{{ total_price }}</u></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="order_box">
+                        {% if not request.session.coupon_applied %}
+                        <div class="form-group row justify-content-center">
+                            <label for="coupon_code" class="col-sm-4 col-form-label">Coupon Code:</label>
+                            <div class="col-sm-8 input-group">
+                                <input type="text" class="form-control" id="coupon_code" name="coupon_code" placeholder="Enter coupon code" value="{{ coupon_code }}">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-primary" id="apply_coupon_button">Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <h2>Order Details</h2>
+                        <ul class="list list_2">
+                            {% if request.session.coupon_applied %}
+                                <li><a>Subtotal: <span>{{ total_price }}</span></a></li>
+                                <li><a>Coupon Code: <span>{{ request.session.coupon_applied.coupon_code }}</span></a></li>
+                                <li><a>Coupon Offer: <span>{{ request.session.coupon_applied.discount }}</span></a></li>
+                                <li><a>Total: <span id="total_price">{{ request.session.coupon_applied.discounted_price }}</span></a></li>
+                                <button type="button" id="remove_coupon_button" class="btn btn-danger">Remove Coupon</button>
+                            {% else %}
+                                <li><a>Total: <span id="total_price">{{ total_price }}</span></a></li>
+                            {% endif %}
+                        </ul>
+                        <div id="coupon_message" ></div>
+
+                        <!-- Payment method selection -->
+                        <form id="checkout_form" method="post" action="{% url 'place-order' %}">
+                            {% csrf_token %}
+                            <div class="form-group row">
+                                <label for="payment_method" class="col-sm-5 col-form-label">Payment Method:</label>
+                                <div class="col-sm-7">
+                                    <select name="payment_method" required>
+                                        <option value="">Select Payment Method</option>
+                                        <option value="razor_pay">Razor Pay</option>
+                                        <option value="cash_on_delivery">Cash on Delivery</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            
+                            <!-- Address selection -->
+                            <div class="form-group row">
+                                <label for="address" class="col-sm-4 col-form-label">Select Address:</label>
+                                <div class="col-sm-">
+                                    <select class="form-control" id="address" name="address" required>
+                                        <option value="">Select Address</option>
+                                        {% for address in user_address %}
+                                        <option value="{{ address.id }}"> {{ address.name }} - {{ address.address_line }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-sm-1">
+                                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addAddressModal">Add Address</button>
+                                </div>
+                            </div>
+                            <button id="rzp-button1" class="btn primary-btn">Place order</button>
+                        </form>
+                        
+                    </div>
                 </div>
             </div>
         </div>
-    </section>
-    <!-- End Banner Area -->
+    </div>
+</section>
 
-    <!--================Checkout Area =================-->
-    <section class="checkout_area section_gap">
-        <div class="container">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-             
-           <!-- <div class="returning_customer">
-                <div class="check_title">
-                    <h2>Returning Customer? <a href="#">Click here to login</a></h2>
-                </div>
-                <p>If you have shopped with us before, please enter your details in the boxes below. If you are a new
-                    customer, please proceed to the Billing & Shipping section.</p>
-                <form class="row contact_form" action="#" method="post" novalidate="novalidate">
-                    <div class="col-md-6 form-group p_star">
-                        <input type="text" class="form-control" id="name" name="name">
-                        <span class="placeholder" data-placeholder="Username or Email"></span>
-                    </div>
-                    <div class="col-md-6 form-group p_star">
-                        <input type="password" class="form-control" id="password" name="password">
-                        <span class="placeholder" data-placeholder="Password"></span>
-                    </div>
-                    <div class="col-md-12 form-group">
-                        <button type="submit" value="submit" class="primary-btn">login</button>
-                        <div class="creat_account">
-                            <input type="checkbox" id="f-option" name="selector">
-                            <label for="f-option">Remember me</label>
-                        </div>
-                        <a class="lost_pass" href="#">Lost your password?</a>
-                    </div>
-                </form>
-            </div> -->
-
-
-            <div class="cupon_area">
-                <div class="check_title">
-                    <h2>Have a coupon? <a href="#">Click here to enter your code</a></h2>
-                </div>
-                <input type="text" placeholder="Enter coupon code">
-                <a class="tp_btn" href="#">Apply Coupon</a>
-            </div>
-            <div class="billing_details">
-                <div class="row">
-
-
-
-                    <div class="col-lg-7">
-                        <div class="billing_details">
-                            <h3>Products</h3>
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Product name</th>
-                                        <th>image</th>
-                                        <th>Quantity</th>
-                                        <th>Per / Price</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in cart_items %}
-                                    <tr>
-                                        <td>{{ item.product.title }}</td>
-                                        <td ><img src="{{ item.product.image.url }}" style="width: 120px; height: 100px;"></td>
-                                        <td>{{ item.quantity }}</td>
-                                        <td>{{ item.product.price }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-
-                    <div class="col-lg-5">
-                        <div class="order_box">
-                            <h2>Your Order</h2>
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Product</th>
-                                        <th>Quantity</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in cart_items %}
-                                    <tr>
-                                        <td>{{ item.product.title }}</td>
-                                        <td>{{ item.quantity }}</td>
-                                        <td>{{ item.total }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                    
-                            <ul class="list list_2">
-                                <li><a >Subtotal <span>{{ total_price }}</span></a></li>
-                                <li><a>Shipping <span>free</span></a></li>
-                                <li><a >Total<span>rs.{{ total_price }}</span></a></li>
-                            </ul>
-                    
-                            <!-- Payment method selection -->
-                            <form method="post" action="{% url 'place-order' %}">
-                                {% csrf_token %}
-                                <div class="form-group row">
-                                    <label for="payment_method" class="col-sm-5 col-form-label">Payment Method:</label>
-                                    <div class="col-sm-7">
-                                        <select class="form-control" id="payment_method" name="payment_method" required>
-                                            <option value="">Select Payment Method</option>
-                                            <option value="credit_card">Credit Card</option>
-                                            <option value="paypal">PayPal</option>
-                                            <option value="paypal">Cash on Delivery</option>
-                                            <!-- Add more payment options if needed -->
-                                        </select>
-                                    </div>
-                                </div>
-                    
-                                <!-- Address selection -->
-                                <div class="form-group row">
-                                    <label for="address" class="col-sm-4 col-form-label">Select Address:</label>
-                                    <div class="col-sm-">
-                                        <select class="form-control" id="address" name="address" required>
-                                            <option value="">Select Address</option>
-                                            {% for address in user_address %}
-                                            <option value="{{ address.id }}"> {{ address.name }} - {{ address.address_line }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-sm-1">
-                                        <button type="button" class="btn btn-primary"  data-toggle="modal" data-target="#addAddressModal">Add Address</button>
-                                    </div>
-                                </div>
-                 
-                      
-                                <button type="submit" class="primary-btn">Place order</button>
-                            </form>
-                        </div>
-                    </div>
-        
-                </div>
-            </div>
-        </div>
-    </section>
-    <!--================End Checkout Area =================-->
-
-    <!-- Add Address Modal -->
+<!-- Add Address Modal -->
 <div class="modal fade" id="addAddressModal" tabindex="-1" role="dialog" aria-labelledby="addAddressModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="addAddressModalLabel">Add Address</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addAddressModalLabel">Add Address</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addAddressForm" method="POST">
+                    {% csrf_token %}
+                    <!-- Address form fields -->
+                    <div class="form-group">
+                        <label for="address_line1">Address name</label>
+                        <input type="text" class="form-control" id="address_line1" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="address_line2">Address</label>
+                        <input type="text" class="form-control" id="address_line2" name="address_line" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="number" class="form-control" id="phone" name="phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="city">City</label>
+                        <input type="text" class="form-control" id="city" name="city" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="state">State</label>
+                        <input type="text" class="form-control" id="state" name="state" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="postal_code">Postal Code</label>
+                        <input type="text" class="form-control" id="postal_code" name="postal_code" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="country">Country</label>
+                        <input type="text" class="form-control" id="country" name="country" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
         </div>
-        <div class="modal-body">
-          <form id="addAddressForm" method="POST">
-            {% csrf_token %}
-            <!-- Address form fields -->
-            <div class="form-group">
-              <label for="address_line1">Address name</label>
-              <input type="text" class="form-control" id="address_line1" name="name" required>
-            </div>
-            <div class="form-group">
-              <label for="address_line2">Address</label>
-              <input type="text" class="form-control" id="address_line2" name="address_line" required>
-            </div>
-            <div class="form-group">
-              <label for="phone">Phone Number</label>
-              <input type="number" class="form-control" id="phone" name="phone" required>
-            </div>
-            <div class="form-group">
-              <label for="city">City</label>
-              <input type="text" class="form-control" id="city" name="city" required>
-            </div>
-            <div class="form-group">
-              <label for="state">State</label>
-              <input type="text" class="form-control" id="state" name="state" required>
-            </div>
-            <div class="form-group">
-              <label for="postal_code">Postal Code</label>
-              <input type="text" class="form-control" id="postal_code" name="postal_code" required>
-            </div>
-            <div class="form-group">
-              <label for="country">Country</label>
-              <input type="text" class="form-control" id="country" name="country" required>
-            </div>
-           
-            <button type="submit" class="btn btn-primary">Submit</button>
-          </form>
-        </div>
-      </div>
     </div>
-  </div>
-  
+</div>
 
-    {% endblock%}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+    // Function to initialize and open Razorpay checkout
+    function openRazorpayCheckout() {
+        var totalAmount = "{% if request.session.coupon_applied %}{{ request.session.coupon_applied.discounted_price }}{% else %}{{ total_price }}{% endif %}";
+        
+        var options = {
+            "key": "rzp_test_NXuTzGqouVQtF6", // Replace with your Key ID
+            "amount": totalAmount * 100, // Amount in currency subunits
+            "currency": "INR",
+            "name": "music_beats",
+            "description": "Test Transaction",
+            "order_id": "{{ order.id }}", // Replace with actual order ID
+            "handler": function(response) {
+                console.log('Payment successful:', response);
+                document.getElementById('checkout_form').submit();
+            },
+            "prefill": {
+                "name": "Gaurav Kumar",
+                "email": "gaurav.kumar@example.com",
+                "contact": "9000090000"
+            },
+            "notes": {
+                "address": "Razorpay Corporate Office"
+            },
+            "theme": {
+                "color": "#3399cc"
+            },
+            "retry": {
+                "enabled": true,
+                "max_count": 3
+            },
+            "debug": true
+        };
+
+        var rzp1 = new Razorpay(options);
+
+        rzp1.on('payment.failed', function(response) {
+            console.error('Payment failed:', response.error);
+            alert('Payment failed: ' + response.error.description);
+        });
+
+        try {
+            rzp1.open();
+        } catch (error) {
+            console.error('Error opening Razorpay checkout:', error);
+        }
+    }
+
+    // Event listener for the payment button
+    document.getElementById('rzp-button1').addEventListener('click', function(e) {
+        e.preventDefault();
+
+        var paymentMethod = document.querySelector('select[name="payment_method"]').value;
+        var selectedAddress = document.querySelector('#address').value;
+        if (selectedAddress && paymentMethod === "razor_pay") {
+            console.log('Opening Razorpay checkout');
+            openRazorpayCheckout();
+        } else {
+            document.getElementById('checkout_form').submit();
+        }
+    });
+</script>
 
 
 
-	{% block foot %}
-    <script>
-        // JavaScript to handle form submission asynchronously
-        $('#addAddressForm').submit(function(event) {
-          event.preventDefault();
-          var formData = $(this).serialize();
-          $.ajax({
-              type: 'POST',
-              url: '{% url "add-address" %}',
-              data: formData,
-              success: function(response) {
-                  $('#addAddressModal').modal('hide');
-                  location.reload(); // Reload the page to reflect changes
-              },
-              error: function(xhr, status, error) {
-                  console.error(xhr.responseText);
-                  // Handle the error here, such as displaying an error message to the user
-              }
-          });
-      });
-    
-    
-        // to select the address
-        $(document).ready(function() {
-          $('#addressSelect').change(function() {
-              var addressId = $(this).val();
-              if (addressId) {
-                  // Redirect to address detail page or perform desired action
-                  console.log('Selected address ID:', addressId);
-              }
-          });
-      });
-    </script>
-    
-    {% endblock%}
+
+
+<script>
+    // JavaScript to handle form submission asynchronously
+    $('#addAddressForm').submit(function(event) {
+        event.preventDefault();
+        var formData = $(this).serialize();
+        $.ajax({
+            type: 'POST',
+            url: '{% url "add-address" %}',
+            data: formData,
+            success: function(response) {
+                $('#addAddressModal').modal('hide');
+                location.reload(); // Reload the page to reflect changes
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText);
+                // Handle the error here, such as displaying an error message to the user
+            }
+        });
+    });
+
+    // To select the address
+    $(document).ready(function() {
+        $('#address').change(function() {
+            var addressId = $(this).val();
+            if (addressId) {
+                // Redirect to address detail page or perform desired action
+                console.log('Selected address ID:', addressId);
+            }
+        });
+    });
+</script>
+
+<!-- script for coupon -->
+
+<script>
+    // Apply coupon
+    $('#apply_coupon_button').click(function() {
+        var couponCode = $('#coupon_code').val();
+        var totalPrice = parseFloat($('#total_price').text());
+
+        $.ajax({
+            type: 'POST',
+            url: '{% url "apply-coupon" %}',
+            data: {
+                'coupon_code': couponCode,
+                'total_price': totalPrice,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#coupon_message').text(response.message).css('color', 'green').show();
+                    setTimeout(function() {
+                        location.reload(); // Reload the page to reflect changes after a short delay
+                    }, 0);
+                } else {
+                    alert(response.error); // Display the error message to the user
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText);
+                alert('An error occurred while applying the coupon.');
+            }
+        });
+    });
+
+    // Remove coupon
+    $('#remove_coupon_button').click(function() {
+        $.ajax({
+            type: 'POST',
+            url: '{% url "remove-coupon" %}',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload(); // Reload the page to reflect changes
+                } else {
+                    alert(response.error); // Display the error message to the user
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText);
+                alert('An error occurred while removing the coupon.');
+            }
+        });
+    });
+</script>
+
+{% endblock %}

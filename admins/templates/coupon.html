@@ -21,21 +21,29 @@
                 <th>Expire Date</th>
                 <th>Discount Price</th>
                 <th>Minimum Amount</th>
-                <th>Active</th>
+                <th>Action</th>
             </tr>
         </thead>
-        <tbody>
-            {% for coupon in coupons %}
-            <tr>
-                <td>{{ coupon.coupon_code }}</td>
-                <td>{{ coupon.created_at }}</td>
-                <td>{{ coupon.expire_date }}</td>
-                <td>{{ coupon.discount_price }}</td>
-                <td>{{ coupon.minimum_amount }}</td>
-                <td>{{ coupon.active }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+<!-- Updated table body -->
+<tbody>
+    {% for coupon in coupons %}
+    <tr>
+        <td>{{ coupon.coupon_code }}</td>
+        <td>{{ coupon.created_at }}</td>
+        <td>{{ coupon.expire_date }}</td>
+        <td>{{ coupon.discount_price }}</td>
+        <td>{{ coupon.minimum_amount }}</td>
+        <td>
+            {% if coupon.active %}
+                <a href="{% url 'coupon-status' coupon.id %}" class="btn btn-success">Activated</a>
+            {% else %}
+                <a href="{% url 'coupon-status' coupon.id %}" class="btn btn-danger">Deactivated</a>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+
     </table>
 </div>
 

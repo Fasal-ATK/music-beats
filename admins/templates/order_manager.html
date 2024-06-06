@@ -103,23 +103,27 @@
                     <tr>
                         <td>{{ order.id }}</td>
                         <td>{{ order.user.username }}</td>
-                        <td>${{ order.total_price }}</td>
+                        <td>{{ order.total_price }}.rs</td>
                         <td>
-                            <select class="status-select" data-order-id="{{ order.id }}" onchange="updateSelectColor(this)">
-                                <option value="order_placed" {% if order.order_status == "order_placed" %} selected {% endif %}>Order Placed</option>
-                                <option value="shipped" {% if order.order_status == "shipped" %} selected {% endif %}>Shipped</option>
-                                <option value="out_for_delivery" {% if order.order_status == "out_for_delivery" %} selected {% endif %}>Out for Delivery</option>
-                                <option value="completed" {% if order.order_status == "completed" %} selected {% endif %}>Completed</option>
-                                <option value="canceled" {% if order.order_status == "canceled" %} selected {% endif %}>Canceled</option>
-                                <option value="returned" {% if order.order_status == "returned" %} selected {% endif %}>Returned</option>
-                                <option value="refunded" {% if order.order_status == "refunded" %} selected {% endif %}>Refunded</option>
-                            </select>
+                            {% if order.order_status in completed_statuses %}
+                                {{ order.get_order_status_display }}
+                            {% else %}
+                                <select class="status-select" data-order-id="{{ order.id }}" onchange="updateSelectColor(this)">
+                                    <option value="order_placed" {% if order.order_status == "order_placed" %} selected {% endif %}>Order Placed</option>
+                                    <option value="shipped" {% if order.order_status == "shipped" %} selected {% endif %}>Shipped</option>
+                                    <option value="out_for_delivery" {% if order.order_status == "out_for_delivery" %} selected {% endif %}>Out for Delivery</option>
+                                    <option value="completed" {% if order.order_status == "completed" %} selected {% endif %}>Completed</option>
+                                </select>
+                            {% endif %}
                         </td>
                         <td>
                             <a href="{% url 'orders-detail' order.id %}" class="btn btn-primary">View Details</a>
                         </td>
                     </tr>
                     {% endfor %}
+                    
+                    
+                    
                 </tbody>
             </table>
         </div>

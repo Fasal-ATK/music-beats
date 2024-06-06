@@ -28,16 +28,19 @@ urlpatterns = [
     path('add-address/',views.Add_Address,name='add-address'),     
     path('edit-address/<int:address_id>/',views.Edit_Address,name='edit-address'),
     path('delete-address/<int:address_id>',views.Delete_Address,name='delete-address'),
+    path('add-money/',views.Add_Wallet_Money,name='add-money'),
     path('change-password/',views.Change_Password,name='change-password'),
 
     path('checkout/',views.Product_Checkout,name='checkout'),
     path('place-order/',views.Place_Order,name='place-order'),
+    
     path('apply-coupon/',views.Apply_Coupon,name='apply-coupon'),
+    path('remove-coupon/',views.Remove_Coupon,name='remove-coupon'),
     
     path('order-page/',views.Order_Page,name='order-page'),
     path('order-details/<int:order_id>/',views.Order_Details,name='order-details'),
-    path('order-tracking/',views.Order_Tracking,name='order-tracking'),
     path('order-cancel/<int:order_id>',views.Order_Cancelling,name='order-cancel'),
+    path('return-product/<int:order_id>',views.Return_Products,name='return-product')
 ]
 
 

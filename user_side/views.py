@@ -1,6 +1,8 @@
+from django.utils import timezone
+from datetime import timedelta
 import random
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponseRedirect
+from django.http import  JsonResponse, HttpResponseRedirect
 from django.views.decorators.cache import never_cache
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, render, redirect
@@ -8,7 +10,11 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.template.loader import render_to_string
 
-from user_side.models import Users, Cart, CartItem, Address, Order, OrderItem, OrderAddress, Wishlist
+import razorpay
+from django.db import transaction
+from django.views.decorators.csrf import csrf_exempt
+
+from user_side.models import CouponUsage, Users, Cart, CartItem, Address, Order, OrderItem, OrderAddress, Wallet, Wishlist
 from admins.models import Coupon, Product, Category
 from user_side.forms import AddressForm
 
@@ -83,6 +89,7 @@ def Verify_OTP(request):
                     phone=user_details['phone']
                 )
                 new_user.save()
+                Wallet.objects.create(user=new_user)
                 messages.success(request, "Account created successfully. You can now login.")
                 return redirect('ulogin')
             else:
@@ -158,23 +165,25 @@ def get_product_details(request):
         return JsonResponse({'error': 'Invalid request'})
 #------------------------------------------- Cart -----------------------------
 
+# Cart view
 @login_required(login_url='ulogin')
 def Cart_Page(request):
+    if 'coupon_applied' in request.session:
+        del request.session['coupon_applied']
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = CartItem.objects.filter(cart=cart).order_by('-id')
     total_price = sum(item.product.price * item.quantity for item in cart_items)
     
     # Get discounted price from session if available
     discounted_price = request.session.get('discounted_price', total_price)
-    coupon_code = request.session.get('coupon_code', '')
 
     return render(request, 'cart.html', {
         'cart_items': cart_items,
         'total_price': total_price,
         'discounted_price': discounted_price,
-        'coupon_code': coupon_code
     })
 
+# Add cart
 @login_required(login_url='ulogin')
 def Add_Cart(request, product_id):
     product = get_object_or_404(Product, id=product_id)
@@ -189,6 +198,7 @@ def Add_Cart(request, product_id):
     messages.success(request, "Product added to cart successfully.")
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
+# Remove cart
 @login_required(login_url='ulogin')
 def Remove_Cart(request, cartitem_id):
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -206,6 +216,7 @@ def Remove_Cart(request, cartitem_id):
             return JsonResponse({'success': False, 'message': 'Cart item does not exist'})
     return JsonResponse({'success': False, 'message': 'Invalid request'})
 
+# Update cart
 @login_required(login_url='ulogin')
 def Update_Cart(request, cartitem_id):
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -224,44 +235,23 @@ def Update_Cart(request, cartitem_id):
                 request.session.pop('coupon_code', None)
                 return JsonResponse({'success': True, 'total_price': total_price, 'item_total': item_total})
             else:
-                return JsonResponse({'success': False, 'message': 'Quantity must be between 1 and 10 and within stock limits'})
+                return JsonResponse({'success': False, 'message': 'Quantity must be between 1 and 10 and within stock '})
         except CartItem.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Cart item does not exist'})
     return JsonResponse({'success': False, 'message': 'Invalid request'})
-
-@login_required(login_url='ulogin')
-def Apply_Coupon(request):
-    if request.method == 'POST':
-        coupon_code = request.POST.get('coupon_code')
-        total_price = float(request.POST.get('total_price', 0))
-        try:
-            coupon = Coupon.objects.get(coupon_code=coupon_code)
-            if not coupon.is_expired:
-                if total_price >= coupon.minimum_amount:
-                    discounted_price = total_price - coupon.discount_price
-                    # Store the discounted price and coupon code in the session
-                    request.session['discounted_price'] = discounted_price
-                    request.session['coupon_code'] = coupon_code
-                    return JsonResponse({'success': True, 'discounted_price': discounted_price})
-                else:
-                    return JsonResponse({'success': False, 'error': 'Total amount does not meet minimum requirement.'})
-            else:
-                return JsonResponse({'success': False, 'error': 'Coupon has expired.'})
-        except Coupon.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Coupon not found.'})
-    return JsonResponse({'success': False, 'error': 'Invalid request.'})
 
 
 
 #-------------------------------------------- Whishlist ---------------------------------------
 
 
-
+#Wishlist
 @login_required(login_url='ulogin')
 def Wishlist_Page(request):
     wishlist_items = Wishlist.objects.filter(user=request.user)
     return render(request, 'wishlist.html', {'wishlist_items': wishlist_items})
 
+#Add wishlist
 @login_required(login_url='ulogin')
 def Add_Wishlist(request, product_id):
     product = get_object_or_404(Product, id=product_id)
@@ -272,6 +262,7 @@ def Add_Wishlist(request, product_id):
         messages.info(request, "Product is already in your wishlist.")
     return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
 
+# Remove wishlist
 @login_required(login_url='ulogin')
 def Remove_Wishlist(request, wishlistitem_id):
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -292,7 +283,8 @@ def Remove_Wishlist(request, wishlistitem_id):
 @login_required(login_url='ulogin')
 def User_Profile(request):
     user_address = Address.objects.filter(user=request.user)
-    return render(request, 'profile.html', {'user_address': user_address})
+    wallet = Wallet.objects.filter(user=request.user).values_list('balance', flat=True).first()
+    return render(request, 'profile.html', {'user_address': user_address,'wallet':wallet})
 
 # Add address view
 @login_required(login_url='ulogin')
@@ -343,6 +335,15 @@ def Delete_Address(request, address_id):
         except Address.DoesNotExist:
             return JsonResponse({'error': 'Address does not exist'}, status=404)
 
+@login_required(login_url='ulogin')
+def Add_Wallet_Money(request):
+    if request.method == 'POST':
+        user_wallet = get_object_or_404(Wallet, user=request.user)
+        money = request.POST.get('amount')
+        user_wallet.balance += int(money)  # Ensure money is converted to an integer
+        user_wallet.save()
+    return redirect('profile')
+
 # Change password view
 @never_cache
 def Change_Password(request):
@@ -364,17 +365,66 @@ def Change_Password(request):
     return redirect('profile')
 
 
-#-------------------------------------  Checkout_Page ------------------------------
+#---------------------------------------------  Checkout_Page ------------------------------------
 
-# Product checkout view
 @login_required(login_url='ulogin')
 def Product_Checkout(request):
     cart_items = CartItem.objects.filter(cart__user=request.user)
-    total_price = sum(item.product.price * item.quantity for item in cart_items)
-    user_address = Address.objects.filter(user=request.user)
-    return render(request, 'checkout.html', {'cart_items': cart_items, 'total_price': total_price, 'user_address': user_address})
+    if not cart_items.exists():
+        return redirect('cart')
 
-# Place order view
+    total_price = sum(item.product.price * item.quantity for item in cart_items)
+    
+    user_address = Address.objects.filter(user=request.user)
+    return render(request, 'checkout.html', {
+        'cart_items': cart_items,
+        'total_price': total_price,
+        'user_address': user_address
+    })
+
+
+@login_required(login_url='ulogin')
+def Apply_Coupon(request):
+    print('get')
+    if request.method == 'POST':
+        print('post')
+        coupon_code = request.POST.get('coupon_code')
+        total_price = float(request.POST.get('total_price', 0))
+        user = request.user
+        try:
+            coupon = Coupon.objects.get(coupon_code=coupon_code)
+            if coupon.is_expired:
+                return JsonResponse({'success': False, 'error': 'Coupon has expired.'})
+            if not coupon.active:
+                return JsonResponse({'success': False, 'error': 'Coupon is not activated yet.'})
+            if total_price < coupon.minimum_amount:
+                return JsonResponse({'success': False, 'error': 'Total amount does not meet minimum requirement.'})
+            if CouponUsage.objects.filter(user=user, coupon=coupon).exists():
+                return JsonResponse({'success': False, 'error': 'Coupon has already been used.'})
+
+            discounted_price = total_price - coupon.discount_price
+            discount = coupon.discount_price
+            request.session['coupon_applied'] = {
+                'discounted_price': discounted_price,
+                'discount': discount,
+                'coupon_code': coupon_code
+            }
+            return JsonResponse({'success': True, 'message': 'Coupon applied successfully!'})
+        except Coupon.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Coupon not found.'})
+    return JsonResponse({'success': False, 'error': 'Invalid request.'})
+
+
+@login_required(login_url='ulogin')
+def Remove_Coupon(request):
+    if request.method == 'POST':
+        if 'coupon_applied' in request.session:
+            del request.session['coupon_applied']
+            return JsonResponse({'success': True})
+        return JsonResponse({'success': False, 'error': 'No coupon applied.'})
+    return JsonResponse({'success': False, 'error': 'Invalid request.'})
+
+
 @login_required(login_url='ulogin')
 def Place_Order(request):
     if request.method == 'POST':
@@ -384,39 +434,67 @@ def Place_Order(request):
         payment_method = request.POST.get('payment_method')
         address_id = request.POST.get('address')
         address = get_object_or_404(Address, id=address_id)
-        # Create the order
-        order = Order.objects.create(
-            user=request.user,
-            address=address, 
-            total_price=cart_total_price,
-            payment_method=payment_method
-        )
-        # Create the order items and update product quantities
-        for item in cart_items:
-            OrderItem.objects.create(
-                order=order,
-                product=item.product,
-                price=item.product.price * item.quantity,
-                quantity=item.quantity
+
+        # Get coupon discount if applied
+        discount = 0
+        coupon_code = ''
+
+        if 'coupon_applied' in request.session:
+            coupon_data = request.session['coupon_applied']
+            coupon_code = coupon_data['coupon_code']
+            discount = coupon_data['discount']
+            coupon = Coupon.objects.get(coupon_code=coupon_code)
+
+        # Wrap order creation in a transaction
+        with transaction.atomic():
+            # Create the order
+            order = Order.objects.create(
+                user=request.user,
+                address=address,
+                total_price=cart_total_price - discount,
+                coupon_discount=discount,
+                coupon_code=coupon_code,
+                payment_method=payment_method
             )
-            item.product.stock -= item.quantity  # Decrease product quantity
-            item.product.save()
-        # Create the order address
-        order_address = OrderAddress.objects.create(
-            order=order,
-            name=address.name,
-            phone=address.phone,
-            address_line=address.address_line,
-            city=address.city,
-            state=address.state,
-            postal_code=address.postal_code,
-            country=address.country
-        ) 
-        user_cart.cartitem_set.all().delete()   # Clear the user's cart
+
+            # Create the order items and update product quantities
+            for item in cart_items:
+                OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    price=item.product.price,
+                    quantity=item.quantity
+                )
+                item.product.stock -= item.quantity  # Decrease product quantity
+                item.product.save()
+
+            # Create the order address
+            OrderAddress.objects.create(
+                order=order,
+                name=address.name,
+                phone=address.phone,
+                address_line=address.address_line,
+                city=address.city,
+                state=address.state,
+                postal_code=address.postal_code,
+                country=address.country
+            )
+
+            # Remove coupon data from session if applied
+            if 'coupon_applied' in request.session:
+                coupon_data = request.session['coupon_applied']
+                coupon_code = coupon_data['coupon_code']
+                coupon = Coupon.objects.get(coupon_code=coupon_code)
+                CouponUsage.objects.create(user=request.user, coupon=coupon)
+                del request.session['coupon_applied']
+
+            # Clear the cart
+            user_cart.cartitem_set.all().delete()
+
         messages.success(request, 'Order placed successfully. Thank you!')
         return redirect('order-page')
-    return redirect('checkout')
 
+    return redirect('checkout')
 
 
 #-------------------------------------  Order_Page ------------------------------
@@ -425,25 +503,70 @@ def Place_Order(request):
 # Order page view
 @login_required(login_url='ulogin')
 def Order_Page(request):
-    user_orders = Order.objects.filter(user=request.user)
+    user_orders = Order.objects.filter(user=request.user).order_by('-id')
     return render(request, 'order.html', {'user_orders': user_orders})
+
 
 @login_required(login_url='ulogin')
 def Order_Details(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     order_items = OrderItem.objects.filter(order=order)
-    order_address = OrderAddress.objects.get(order=order)
+    order_address, _ = OrderAddress.objects.get_or_create(order=order)
+
+    # Determine if the order can be canceled
+    can_cancel_order = order.order_status in ['order_placed', 'shipped', 'out_for_delivery']
+    
+    # Calculate if the order is older than one week
+    is_order_older_than_week = (timezone.now() - order.order_date) > timedelta(weeks=1)
+
+    # Calculate the actual price
+    actual_price = order.total_price + order.coupon_discount
+    
     return render(request, 'order_details.html', {
         'order': order,
         'order_items': order_items,
-        'order_address': order_address
+        'order_address': order_address,
+        'can_cancel_order': can_cancel_order,
+        'actual_price': actual_price,
+        'is_order_older_than_week': is_order_older_than_week,
     })
 
+
+# Order Cancelling view
 @login_required(login_url='ulogin')
-def Order_Tracking(request):
-    return render(request,'order_tracking.html')
+def Order_Cancelling(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    
+    # Determine if the order can be canceled
+    can_cancel_order = False
+    if order.order_status in ['order_placed', 'shipped', 'out_for_delivery']:
+        can_cancel_order = True
+
+    # Cancel order logic
+    if can_cancel_order:
+        if order.payment_method in ['razor_pay', 'wallet']:
+            user_wallet, created = Wallet.objects.get_or_create(user=request.user)
+
+            with transaction.atomic():
+                user_wallet.balance += order.total_price
+                user_wallet.save()
+
+        order.order_status = 'canceled'
+        order.save()
+        messages.success(request, 'Order canceled successfully')
+    else:
+        messages.error(request, 'Cannot cancel order')
+
+    return redirect('order-details', order_id=order.id)
 
 
 @login_required(login_url='ulogin')
-def Order_Cancelling(request,order_id):
+def Return_Products(request, order_id):
+    if request.method == 'POST':
+        order_request = get_object_or_404(Order, id=order_id)
+        order_request.order_status = 'return_requested'
+        order_request.save()
+        messages.success(request, 'Return request submitted successfully.')
+    else:
+        messages.error(request, 'Invalid request method.')
     return redirect('order-page')

@@ -23,6 +23,13 @@
     </div>
 </section>
 <!-- End Banner Area -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
 
 <section class="order_details mb-5">
     <div class="container">
@@ -52,9 +59,17 @@
                     {% endfor %}
                 </tbody>
             </table>
-            
+
+            {% if order.coupon_discount == 0 %}
             <h2 style="text-align: right;">Total Price = <u>{{ order.total_price }}</u>rs</h2>
-            
+            {% else %}
+            <p style="text-align: right;">Actual Price = {{ actual_price }}</p>
+            <p style="text-align: right;">Coupon discount = {{ order.coupon_discount }}</p>
+            <p style="text-align: right;">Coupon Code = {{ order.coupon_code }}</p>
+            <h2 style="text-align: right;">Total Price = <u>{{ order.total_price }}</u>rs</h2>
+
+            {% endif %}
+
             <div class="order_address mt-5">
                 <h5 id="addressHeader" style="cursor: pointer;">Show Address <i id="arrow" class="fas fa-chevron-down"></i></h5>
                 <div id="addressDetails" style="display: none;">
@@ -68,11 +83,25 @@
             </div>
 
             <div style="text-align: center; margin-top: 20px;">
-                {% if not order.is_complete %}
-                    <form method="post" action="">
+                {% if order.order_status == 'return_requested' %}
+                    <p>Return Requested</p>
+                {% elif order.order_status == 'completed' %}
+                    {% if is_order_older_than_week %}
+                        <p>Thank you for your purchase</p>
+                    {% else %}
+                        <form method="post" action="{% url 'return-product' order.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="return_product" value="true">
+                            <button type="submit" class="btn btn-primary">Return Product</button>
+                        </form>
+                    {% endif %}
+                {% elif can_cancel_order %}
+                    <form method="post" action="{% url 'order-cancel' order.id %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-danger">Cancel Order</button>
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</button>
                     </form>
+                {% elif order.order_status == 'canceled' %}
+                    <strong><p style="color: red;">Order Canceled</p></strong>
                 {% endif %}
             </div>
         </div>

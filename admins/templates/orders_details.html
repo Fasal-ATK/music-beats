@@ -92,8 +92,8 @@
                             <td>{{ order.payment_method }}</td>
                             <td>{{ order.order_date }}</td>
                             <td>{{ item.quantity }}</td>
-                            <td>${{ item.product.price }}</td>
-                            <td>${{ item.price }}</td>
+                            <td>{{ item.product.price }}.rs</td>
+                            <td>{{ item.price }}.rs</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -101,7 +101,7 @@
             </div>
 
             <div class="total-price">
-                Total Price: ${{ order.total_price }}
+                Total Price: {{ order.total_price }}.rs
             </div>
 
             <div class="order-address">
@@ -110,9 +110,37 @@
                 <p>Phone: {{ order_address.phone }}</p>
                 <p>Address: {{ order_address.address_line }}, {{ order_address.city }}, {{ order_address.state }}, {{ order_address.postal_code }}, {{ order_address.country }}</p>
             </div>
+
+            {% if order.order_status == 'return_requested' %}
+
+            <div class="return-actions">
+                <form method="post" action="{% url 'accept-reject' order.id 'accept' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">Accept Return</button>
+                </form>
+                <form method="post" action="{% url 'accept-reject' order.id 'reject' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Reject Return</button>
+                </form>
+            </div>
+
+            {% elif order.order_status == 'return_accepted' %}
+
+            <form method="post" action="{% url 'refund' order.id  %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-info"> Refund </button>
+            </form>
+
+            {% elif order.order_status == 'returned' %}
+
+            <h3><u>Money Refunded</u></h3>
+
+            {% endif %}
         </div>
     </div>
 </div>
+
+
 {% endblock %}
 
 {% block script %}

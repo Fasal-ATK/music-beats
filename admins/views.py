@@ -1,18 +1,20 @@
 import json
-from datetime import datetime
-
+from datetime import datetime,timedelta
+from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseNotFound, JsonResponse
+from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+
 from .forms import CategoryForm, ProductForm, BrandForm
 from .models import Category, Product, Brand, Coupon
-from user_side.models import Users, Order, OrderItem, OrderAddress
+from user_side.models import Users, Order, OrderItem, OrderAddress,Wallet
 # Create your views here.
 
 
@@ -49,6 +51,7 @@ def User_Manager(request):
     context = { 'user' : user }
     return render(request,'user_manager.html',context)
 
+@login_required(login_url='adminlogin')
 def Block_User(request,id):
     user = Users.objects.get(id=id)
     user.is_blocked = not user.is_blocked
@@ -61,8 +64,106 @@ def Block_User(request,id):
 
 @login_required(login_url='adminlogin')
 def Dashboard(request):
-    return render(request,'dashboard.html')
- 
+    # Default to current month's data
+    now = timezone.now()
+    first_day_of_month = now.replace(day=1)
+    start_date = first_day_of_month
+    end_date = now
+
+    if request.method == 'POST':
+        start_date_str = request.POST.get('start_date')
+        end_date_str = request.POST.get('end_date')
+
+        # Convert to timezone-aware datetimes
+        start_date = timezone.make_aware(datetime.strptime(start_date_str, '%Y-%m-%d'))
+        end_date = timezone.make_aware(datetime.strptime(end_date_str, '%Y-%m-%d')) + timedelta(days=1)
+
+    sales_data = Order.objects.filter(order_date__range=[start_date, end_date])
+
+    # Calculate overall sales count, overall order amount, and overall discount
+    overall_sales_count = sales_data.count()
+    overall_order_amount = sum(order.total_price for order in sales_data)
+    overall_discount = sum(order.coupon_discount for order in sales_data)
+
+    # Prepare data for sales report
+    sales_report = [{
+        'order_id': order.id,
+        'order_date': order.order_date,
+        'total_price': order.total_price,
+        'coupon_discount': order.coupon_discount,
+    } for order in sales_data]
+
+    if request.method == 'POST':
+        return JsonResponse({
+            'sales_report': sales_report,
+            'overall_sales_count': overall_sales_count,
+            'overall_order_amount': overall_order_amount,
+            'overall_discount': overall_discount
+        })
+
+    return render(request, 'dashboard.html', {
+        'overall_sales_count': overall_sales_count,
+        'overall_order_amount': overall_order_amount,
+        'overall_discount': overall_discount,
+        'sales_report': sales_report,
+    })
+
+
+def Generete_Sales_Report(request):
+    # Fetch sales data based on the selected date range or default to current month
+    now = timezone.now()
+    first_day_of_month = now.replace(day=1)
+    start_date_str = request.GET.get('start_date', first_day_of_month.strftime('%Y-%m-%d'))
+    end_date_str = request.GET.get('end_date', now.strftime('%Y-%m-%d'))
+
+    start_date = timezone.make_aware(datetime.strptime(start_date_str, '%Y-%m-%d'))
+    end_date = timezone.make_aware(datetime.strptime(end_date_str, '%Y-%m-%d')) + timedelta(days=1)
+
+    sales_data = Order.objects.filter(order_date__range=[start_date, end_date])
+
+    # Calculate overall sales count, overall order amount, and overall discount
+    overall_sales_count = sales_data.count()
+    overall_order_amount = sum(order.total_price for order in sales_data)
+    overall_discount = sum(order.coupon_discount for order in sales_data)
+
+    # Create the HttpResponse object with the appropriate PDF headers.
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="sales_report.pdf"'
+
+    # Create the PDF object, using the response object as its "file."
+    p = canvas.Canvas(response, pagesize=letter)
+    width, height = letter
+
+    # Draw a title
+    p.drawString(100, height - 100, f"Sales Report from {start_date_str} to {end_date_str}")
+
+    # Draw overall statistics
+    p.drawString(100, height - 150, f"Overall Sales Count: {overall_sales_count}")
+    p.drawString(100, height - 170, f"Overall Order Amount: {overall_order_amount}")
+    p.drawString(100, height - 190, f"Overall Discount: {overall_discount}")
+
+    # Draw table headers
+    p.drawString(100, height - 230, "Order ID")
+    p.drawString(200, height - 230, "Order Date")
+    p.drawString(300, height - 230, "Total Price")
+    p.drawString(400, height - 230, "Coupon Discount")
+
+    # Draw table content
+    y = height - 250
+    for order in sales_data:
+        p.drawString(100, y, str(order.id))
+        p.drawString(200, y, order.order_date.strftime('%Y-%m-%d %H:%M'))
+        p.drawString(300, y, str(order.total_price))
+        p.drawString(400, y, str(order.coupon_discount))
+        y -= 20
+        if y < 100:  # Add a new page if space runs out
+            p.showPage()
+            y = height - 100
+
+    # Close the PDF object cleanly.
+    p.showPage()
+    p.save()
+    return response
 
  #-------------------------------------------------- Product ----------------------------------------------------
 
@@ -163,7 +264,7 @@ def List_Category(request,c_id):
 
 # -------------------------------------------------- Brand -------------------------------------------------
 
-
+@login_required(login_url='adminlogin')
 def Brand_Manager(request):
     brands = Brand.objects.all().order_by('id')
     return render(request,'brand.html',{'brands':brands})
@@ -214,9 +315,11 @@ def List_Brand(request,b_id):
 
 # -------------------------------------------------- order -------------------------------------------------
 
+@login_required(login_url='adminlogin')
 def Order_Manager(request):
     orders = Order.objects.all().order_by('-id')
-    return render(request, 'order_manager.html', {'orders': orders})
+    completed_statuses = ['completed', 'canceled', 'return_requested', 'return_accepted', 'return_rejected', 'returned']
+    return render(request, 'order_manager.html', {'orders': orders, 'completed_statuses': completed_statuses})
 
 
 @csrf_exempt
@@ -238,6 +341,7 @@ def Update_Order_Status(request):
             return JsonResponse({'success': False, 'message': 'Invalid JSON'})
     return JsonResponse({'success': False, 'message': 'Invalid request'})
 
+@login_required(login_url='adminlogin')
 def Orders_Detail(request, order_id):
     try:
         order = Order.objects.select_related('user', 'address').get(id=order_id)
@@ -254,12 +358,37 @@ def Orders_Detail(request, order_id):
     except OrderAddress.DoesNotExist:
         return HttpResponseNotFound("Order address not found")
     
+def Accept_or_Reject_Return(request, order_id, action):
+    try:
+        order = Order.objects.get(id=order_id)
+        if action == 'accept':
+            order.order_status = 'return_accepted'
+
+        elif action == 'reject':
+            order.order_status = 'return_rejected'
+        
+        order.save()
+        return redirect('orders-detail', order_id=order_id)
+    
+    except Order.DoesNotExist:
+        return HttpResponseNotFound("Order not found")
+
+def Refund(request, order_id):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, id=order_id)
+        user = order.user
+        user_wallet, created = Wallet.objects.get_or_create(user=user)
+        user_wallet.balance += order.total_price
+        user_wallet.save()
+        order.order_status = 'returned'
+        order.save()  
+    return redirect('orders-detail', order_id=order_id)
 
 # -------------------------------------------------- Coupon -------------------------------------------------
 
-
+@login_required(login_url='adminlogin')
 def Coupon_Manager(request):
-    coupons = Coupon.objects.all()
+    coupons = Coupon.objects.all().order_by('-id')
     return render(request, 'coupon.html', {'coupons': coupons})
 
 @csrf_protect
@@ -286,3 +415,10 @@ def Add_Coupon(request):
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Invalid request'})
+
+
+def Coupon_Status(request,coupon_id):
+    coupon = Coupon.objects.get(id=coupon_id)
+    coupon.active = not coupon.active
+    coupon.save()
+    return redirect('coupons')

@@ -1,42 +1,176 @@
 {% extends 'sidebar.html' %}
-
 {% load static %}
 
 {% block head %} 
-<title>  dashboard  </title> 
+<title>Dashboard</title> 
+<style>
+    /* Custom styles for dashboard */
+    .container-fluid {
+        padding: 20px;
+    }
+
+    #salesFilterForm {
+        margin-bottom: 20px;
+    }
+
+    #salesReportTable {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+
+    #salesReportTable th, #salesReportTable td {
+        border: 1px solid #ddd;
+        padding: 10px;
+        text-align: left;
+    }
+
+    .card {
+        margin-bottom: 20px;
+    }
+
+    .card-header {
+        background-color: #007bff;
+        color: rgb(0, 0, 0);
+    }
+
+    .card-body {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
 {% endblock %}
 
- 
-    <!--Container Main start-->
+{% block content %}
 
-        {% block content %}
+<div class="container-fluid">
+    <h2>Sales Dashboard</h2>
+    <!-- Date range filter form -->
+    <form id="salesFilterForm" method="post">
+        {% csrf_token %}
+        <label for="start_date">From:</label>
+        <input type="date" id="start_date" name="start_date">
+        <label for="end_date">To:</label>
+        <input type="date" id="end_date" name="end_date">
+        <button type="submit" class="btn btn-primary">Filter</button>
+    </form>
 
-        <!-- Dashboard HTML code goes here -->
-           
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card" style="border-color: #007bff; background-color: #f8f9fa;">
-                        <div class="card-body" style="height: 500px;"> <!-- Adjust height as needed -->
-                            <h5 class="card-title">Sales Data</h5>
-                            <canvas id="salesChart" style="width: 100%; height: 100%;"></canvas>
-                        </div>
-                    </div>
+    <!-- Print report button -->
+    <a href="{% url 'generate_sales_report' %}" class="btn btn-success" id="printReportBtn">Print Report</a>
+
+    <!-- Overall statistics cards -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Overall Sales Count</div>
+                <div class="card-body">
+                    <h5 class="card-title"><span id="overallSalesCount">{{ overall_sales_count }}</span></h5>
                 </div>
             </div>
         </div>
-   
-        {% endblock %}
-         <!--Container Main End-->
- 
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Overall Order Amount</div>
+                <div class="card-body">
+                    <h5 class="card-title"><span id="overallOrderAmount">{{ overall_order_amount }}</span></h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Overall Discount</div>
+                <div class="card-body">
+                    <h5 class="card-title"><span id="overallDiscount">{{ overall_discount }}</span></h5>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        {% block script %}
+    <!-- Sales report table -->
+    <table id="salesReportTable">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Order Date</th>
+                <th>Total Price</th>
+                <th>Coupon Discount</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Sales report data will be appended here -->
+            {% for item in sales_report %}
+            <tr>
+                <td>{{ item.order_id }}</td>
+                <td>{{ item.order_date }}</td>
+                <td>{{ item.total_price }}</td>
+                <td>{{ item.coupon_discount }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="{% static '4admin/js/dash.js' %}"></script>
-         {% endblock %}
+{% endblock %}
 
-</body>
-</html>
+{% block script %}
+<!-- Load jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static '4admin/js/dash.js' %}"></script>
+<script>
+    // Handle form submission for date range filtering
+    $('#salesFilterForm').submit(function(event) {
+        event.preventDefault();
+        var formData = $(this).serialize();
+        $.ajax({
+            type: 'POST',
+            url: '{% url "dash" %}',
+            data: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                displaySalesReport(response.sales_report);
+                $('#overallSalesCount').text(response.overall_sales_count);
+                $('#overallOrderAmount').text(response.overall_order_amount);
+                $('#overallDiscount').text(response.overall_discount);
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText);
+            }
+        });
+    });
+
+    // Display sales report data in the table
+    function displaySalesReport(salesReport) {
+        var tableBody = $('#salesReportTable tbody');
+        tableBody.empty();
+        salesReport.forEach(function(item) {
+            var row = '<tr>' +
+                '<td>' + item.order_id + '</td>' +
+                '<td>' + item.order_date + '</td>' +
+                '<td>' + item.total_price + '</td>' +
+                '<td>' + item.coupon_discount + '</td>' +
+                '</tr>';
+            tableBody.append(row);
+        });
+    }
+
+    // Handle print report button click
+    $('#printReportBtn').click(function(event) {
+        event.preventDefault();
+        var startDate = $('#start_date').val();
+        var endDate = $('#end_date').val();
+        var url = $(this).attr('href');
+        if (startDate) {
+            url += '?start_date=' + startDate;
+        }
+        if (endDate) {
+            url += '&end_date=' + endDate;
+        }
+        window.open(url, '_blank');
+    });
+</script>
+{% endblock %}

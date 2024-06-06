@@ -1,5 +1,5 @@
 from django.contrib import admin
-from user_side.models import Users,Cart,CartItem,Address,Order,OrderItem,OrderAddress,CouponUsage,Wishlist
+from user_side.models import Users,Cart,CartItem,Address,Order,OrderItem,OrderAddress,CouponUsage,Wishlist,Wallet
 
 # Register your models here.
 
@@ -12,3 +12,4 @@ admin.site.register(OrderItem)
 admin.site.register(OrderAddress)
 admin.site.register(CouponUsage)
 admin.site.register(Wishlist)
+admin.site.register(Wallet)

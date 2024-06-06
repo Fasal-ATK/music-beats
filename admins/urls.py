@@ -8,6 +8,7 @@ urlpatterns = [
     path('signout/',views.Admin_Logout,name='signout'),
 
     path('dash/',views.Dashboard,name='dash'),
+    path('generate_sales_report/',views.Generete_Sales_Report, name='generate_sales_report'),
 
     path('user-mng/',views.User_Manager,name='user-mng'),
     path('block/<int:id>',views.Block_User,name='block'),
@@ -30,9 +31,12 @@ urlpatterns = [
     path('orders/',views.Order_Manager,name='orders'),
     path('update-order-status/',views.Update_Order_Status,name='update-order-status'),
     path('orders-detail/<int:order_id>',views.Orders_Detail,name='orders-detail'),
+    path('accept-reject/<int:order_id>/<str:action>/', views.Accept_or_Reject_Return, name='accept-reject'),
+    path('refund/<int:order_id>/',views.Refund,name='refund'),
 
     path('coupons/',views.Coupon_Manager,name='coupons'),
     path('add-coupon/',views.Add_Coupon,name='add-coupon'),
+    path('coupon-status/<int:coupon_id>',views.Coupon_Status,name='coupon-status'),
 
 ]
 
