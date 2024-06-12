@@ -1,3 +1,4 @@
+import calendar
 import json
 from datetime import datetime,timedelta
 from django.utils import timezone
@@ -11,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from django.db.models import Sum, Count
 
 from .forms import CategoryForm, ProductForm, BrandForm
 from .models import Category, Product, Brand, Coupon
@@ -61,9 +63,49 @@ def Block_User(request,id):
 
 #-------------------------------------------------- Dashboard ---------------------------------------------------
 
+def Dashboard(request):
+    # Get current month and year
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    # Filter orders for the current month
+    orders_this_month = Order.objects.filter(order_date__month=current_month, order_date__year=current_year)
+    
+    # Calculate total sales for each product
+    product_sales = OrderItem.objects.filter(order__in=orders_this_month).values('product__title').annotate(total_sales=Sum('quantity')).order_by('-total_sales')[:10]
+    
+    # Calculate total sales for each category
+    category_sales = OrderItem.objects.filter(order__in=orders_this_month).values('product__category__name').annotate(total_sales=Sum('quantity')).order_by('-total_sales')[:10]
+    
+    # Calculate total discount given
+    total_discount = orders_this_month.aggregate(total_discount=Sum('coupon_discount'))['total_discount'] or 0
+    
+    # Calculate total sales
+    total_sales = orders_this_month.aggregate(total_sales=Sum('total_price'))['total_sales'] or 0
+    
+    # Prepare data for chart
+    order_dates = []
+    order_counts = []
+    for i in range(1, 13):
+        orders_count = Order.objects.filter(order_date__month=i, order_date__year=current_year).count()
+        order_dates.append(calendar.month_name[i])
+        order_counts.append(orders_count)
+    
+    context = {
+        'order_dates': order_dates,
+        'order_counts': order_counts,
+        'best_selling_products': product_sales,
+        'best_selling_categories': category_sales,
+        'total_discount': total_discount,
+        'total_sales': total_sales,
+        'total_orders': orders_this_month.count()
+    }
+    return render(request, 'dashboard.html', context)
+
+
 
 @login_required(login_url='adminlogin')
-def Dashboard(request):
+def Sales(request):
     # Default to current month's data
     now = timezone.now()
     first_day_of_month = now.replace(day=1)
@@ -101,7 +143,7 @@ def Dashboard(request):
             'overall_discount': overall_discount
         })
 
-    return render(request, 'dashboard.html', {
+    return render(request, 'sales.html', {
         'overall_sales_count': overall_sales_count,
         'overall_order_amount': overall_order_amount,
         'overall_discount': overall_discount,
@@ -318,7 +360,7 @@ def List_Brand(request,b_id):
 @login_required(login_url='adminlogin')
 def Order_Manager(request):
     orders = Order.objects.all().order_by('-id')
-    completed_statuses = ['completed', 'canceled', 'return_requested', 'return_accepted', 'return_rejected', 'returned']
+    completed_statuses = ['completed', 'canceled', 'return_requested', 'return_accepted', 'return_rejected', 'returned','pending']
     return render(request, 'order_manager.html', {'orders': orders, 'completed_statuses': completed_statuses})
 
 
@@ -347,16 +389,31 @@ def Orders_Detail(request, order_id):
         order = Order.objects.select_related('user', 'address').get(id=order_id)
         order_items = OrderItem.objects.filter(order=order)
         order_address = OrderAddress.objects.get(order=order)
+
+        # Calculate the total for each order item
+        order_items_with_total = []
+        for item in order_items:
+            total_price = item.product.price * item.quantity
+            order_items_with_total.append({
+                'item': item,
+                'total_price': total_price
+            })
+        sub_total = order.total_price + order.coupon_discount
+
         context = {
             'order': order,
-            'order_items': order_items,
-            'order_address': order_address
+            'order_items_with_total': order_items_with_total,
+            'sub_total':sub_total,
+            'order_address': order_address,
+            'coupon_code': order.coupon_code,
+            'coupon_discount': order.coupon_discount,
         }
         return render(request, 'orders_details.html', context)
     except Order.DoesNotExist:
         return HttpResponseNotFound("Order not found")
     except OrderAddress.DoesNotExist:
         return HttpResponseNotFound("Order address not found")
+
     
 def Accept_or_Reject_Return(request, order_id, action):
     try:

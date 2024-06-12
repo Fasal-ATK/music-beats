@@ -8,6 +8,7 @@ urlpatterns = [
     path('signout/',views.Admin_Logout,name='signout'),
 
     path('dash/',views.Dashboard,name='dash'),
+    path('sales/',views.Sales,name='sales'),
     path('generate_sales_report/',views.Generete_Sales_Report, name='generate_sales_report'),
 
     path('user-mng/',views.User_Manager,name='user-mng'),

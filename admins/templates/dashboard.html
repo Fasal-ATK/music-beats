@@ -2,175 +2,73 @@
 {% load static %}
 
 {% block head %} 
-<title>Dashboard</title> 
-<style>
-    /* Custom styles for dashboard */
-    .container-fluid {
-        padding: 20px;
-    }
-
-    #salesFilterForm {
-        margin-bottom: 20px;
-    }
-
-    #salesReportTable {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-    }
-
-    #salesReportTable th, #salesReportTable td {
-        border: 1px solid #ddd;
-        padding: 10px;
-        text-align: left;
-    }
-
-    .card {
-        margin-bottom: 20px;
-    }
-
-    .card-header {
-        background-color: #007bff;
-        color: rgb(0, 0, 0);
-    }
-
-    .card-body {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-</style>
+<title>Admin Dashboard</title> 
 {% endblock %}
 
 {% block content %}
-
-<div class="container-fluid">
-    <h2>Sales Dashboard</h2>
-    <!-- Date range filter form -->
-    <form id="salesFilterForm" method="post">
-        {% csrf_token %}
-        <label for="start_date">From:</label>
-        <input type="date" id="start_date" name="start_date">
-        <label for="end_date">To:</label>
-        <input type="date" id="end_date" name="end_date">
-        <button type="submit" class="btn btn-primary">Filter</button>
-    </form>
-
-    <!-- Print report button -->
-    <a href="{% url 'generate_sales_report' %}" class="btn btn-success" id="printReportBtn">Print Report</a>
-
-    <!-- Overall statistics cards -->
+<div class="container">
     <div class="row">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">Overall Sales Count</div>
-                <div class="card-body">
-                    <h5 class="card-title"><span id="overallSalesCount">{{ overall_sales_count }}</span></h5>
-                </div>
-            </div>
+        <div class="col-md-6">
+            <h2>Chart with filter</h2>
+            <canvas id="orderChart"></canvas>
         </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">Overall Order Amount</div>
-                <div class="card-body">
-                    <h5 class="card-title"><span id="overallOrderAmount">{{ overall_order_amount }}</span></h5>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">Overall Discount</div>
-                <div class="card-body">
-                    <h5 class="card-title"><span id="overallDiscount">{{ overall_discount }}</span></h5>
-                </div>
-            </div>
+        <div class="col-md-6">
+            <h2>Best Selling Products (Top 10)</h2>
+            <ul>
+                {% for order_item in best_selling_products %}
+                    <li>{{ order_item.product__title }} - Total Sales: {{ order_item.total_sales }}</li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
-
-    <!-- Sales report table -->
-    <table id="salesReportTable">
-        <thead>
-            <tr>
-                <th>Order ID</th>
-                <th>Order Date</th>
-                <th>Total Price</th>
-                <th>Coupon Discount</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Sales report data will be appended here -->
-            {% for item in sales_report %}
-            <tr>
-                <td>{{ item.order_id }}</td>
-                <td>{{ item.order_date }}</td>
-                <td>{{ item.total_price }}</td>
-                <td>{{ item.coupon_discount }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Best Selling Categories (Top 10)</h2>
+            <ul>
+                {% for category_sale in best_selling_categories %}
+                    <li>{{ category_sale.product__category__name }} - Total Sales: {{ category_sale.total_sales }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Generate Ledger Book</h2>
+            <p>(Optional: Include this section only if ledger book generation is implemented)</p>
+        </div>
+    </div>
 </div>
-
 {% endblock %}
 
 {% block script %}
-<!-- Load jQuery -->
-<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{% static '4admin/js/dash.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
 <script>
-    // Handle form submission for date range filtering
-    $('#salesFilterForm').submit(function(event) {
-        event.preventDefault();
-        var formData = $(this).serialize();
-        $.ajax({
-            type: 'POST',
-            url: '{% url "dash" %}',
-            data: formData,
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            success: function(response) {
-                displaySalesReport(response.sales_report);
-                $('#overallSalesCount').text(response.overall_sales_count);
-                $('#overallOrderAmount').text(response.overall_order_amount);
-                $('#overallDiscount').text(response.overall_discount);
-            },
-            error: function(xhr, status, error) {
-                console.error(xhr.responseText);
+    var orderDates = JSON.parse('{{ order_dates_json|escapejs }}');
+    var orderCounts = JSON.parse('{{ order_counts_json|escapejs }}');
+
+    var ctx = document.getElementById('orderChart').getContext('2d');
+    var myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: orderDates,
+            datasets: [{
+                label: 'Orders',
+                data: orderCounts,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true
+                    }
+                }]
             }
-        });
-    });
-
-    // Display sales report data in the table
-    function displaySalesReport(salesReport) {
-        var tableBody = $('#salesReportTable tbody');
-        tableBody.empty();
-        salesReport.forEach(function(item) {
-            var row = '<tr>' +
-                '<td>' + item.order_id + '</td>' +
-                '<td>' + item.order_date + '</td>' +
-                '<td>' + item.total_price + '</td>' +
-                '<td>' + item.coupon_discount + '</td>' +
-                '</tr>';
-            tableBody.append(row);
-        });
-    }
-
-    // Handle print report button click
-    $('#printReportBtn').click(function(event) {
-        event.preventDefault();
-        var startDate = $('#start_date').val();
-        var endDate = $('#end_date').val();
-        var url = $(this).attr('href');
-        if (startDate) {
-            url += '?start_date=' + startDate;
         }
-        if (endDate) {
-            url += '&end_date=' + endDate;
-        }
-        window.open(url, '_blank');
     });
 </script>
+
 {% endblock %}

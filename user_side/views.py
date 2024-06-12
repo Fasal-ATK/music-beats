@@ -1,8 +1,9 @@
+from decimal import Decimal
 from django.utils import timezone
 from datetime import timedelta
 import random
 from django.contrib.auth.decorators import login_required
-from django.http import  JsonResponse, HttpResponseRedirect
+from django.http import  HttpResponse, JsonResponse, HttpResponseRedirect
 from django.views.decorators.cache import never_cache
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, render, redirect
@@ -10,9 +11,13 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.template.loader import render_to_string
 
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
 import razorpay
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import ObjectDoesNotExist
 
 from user_side.models import CouponUsage, Users, Cart, CartItem, Address, Order, OrderItem, OrderAddress, Wallet, Wishlist
 from admins.models import Coupon, Product, Category
@@ -374,12 +379,25 @@ def Product_Checkout(request):
         return redirect('cart')
 
     total_price = sum(item.product.price * item.quantity for item in cart_items)
+
+    # Get the wallet balance or set it to 0 if no wallet exists
+    try:
+        user_wallet = Wallet.objects.get(user=request.user)
+        user_wallet_balance = user_wallet.balance
+    except Wallet.DoesNotExist:
+        user_wallet_balance = Decimal(0)
+    
+    discount = Decimal(0)
+    if 'coupon_applied' in request.session:
+        coupon_details = request.session['coupon_applied']
+        discount = Decimal(coupon_details['discount'])
     
     user_address = Address.objects.filter(user=request.user)
     return render(request, 'checkout.html', {
         'cart_items': cart_items,
         'total_price': total_price,
-        'user_address': user_address
+        'user_address': user_address,
+        'user_wallet_balance':user_wallet_balance
     })
 
 
@@ -434,6 +452,7 @@ def Place_Order(request):
         payment_method = request.POST.get('payment_method')
         address_id = request.POST.get('address')
         address = get_object_or_404(Address, id=address_id)
+        payment_status = request.POST.get('payment_status', 'pending')
 
         # Get coupon discount if applied
         discount = 0
@@ -445,6 +464,12 @@ def Place_Order(request):
             discount = coupon_data['discount']
             coupon = Coupon.objects.get(coupon_code=coupon_code)
 
+        # Determine order status based on payment status
+        if payment_status == 'success':
+            order_status = 'order_placed'
+        else:
+            order_status = 'pending'
+
         # Wrap order creation in a transaction
         with transaction.atomic():
             # Create the order
@@ -454,7 +479,8 @@ def Place_Order(request):
                 total_price=cart_total_price - discount,
                 coupon_discount=discount,
                 coupon_code=coupon_code,
-                payment_method=payment_method
+                payment_method=payment_method,
+                order_status=order_status
             )
 
             # Create the order items and update product quantities
@@ -491,11 +517,28 @@ def Place_Order(request):
             # Clear the cart
             user_cart.cartitem_set.all().delete()
 
-        messages.success(request, 'Order placed successfully. Thank you!')
+        if order_status == 'order_placed':
+            messages.success(request, 'Order placed successfully. Thank you!')
+        else:
+            messages.warning(request, 'Payment failed. Your order is pending.')
+
         return redirect('order-page')
 
     return redirect('checkout')
 
+def Complete_Pending_Order(request):
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        print(order_id)
+        try:
+            print('try')
+            order = get_object_or_404(Order, id=order_id)
+            order.order_status = 'order_placed'
+            order.save()
+            return JsonResponse({'status': 'success', 'message': 'Order status updated successfully.'})
+        except Order.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Order not found.'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
 
 #-------------------------------------  Order_Page ------------------------------
 
@@ -513,10 +556,8 @@ def Order_Details(request, order_id):
     order_items = OrderItem.objects.filter(order=order)
     order_address, _ = OrderAddress.objects.get_or_create(order=order)
 
-    # Determine if the order can be canceled
     can_cancel_order = order.order_status in ['order_placed', 'shipped', 'out_for_delivery']
     
-    # Calculate if the order is older than one week
     is_order_older_than_week = (timezone.now() - order.order_date) > timedelta(weeks=1)
 
     # Calculate the actual price
@@ -531,6 +572,84 @@ def Order_Details(request, order_id):
         'is_order_older_than_week': is_order_older_than_week,
     })
 
+
+@login_required(login_url='ulogin')
+def generate_invoice_pdf(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    order_items = OrderItem.objects.filter(order=order)
+    order_address = get_object_or_404(OrderAddress, order=order)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="invoice_{order.id}.pdf"'
+
+    pdf = canvas.Canvas(response, pagesize=letter)
+    width, height = letter
+
+    # Invoice Header
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(30, height - 50, "Invoice")
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(30, height - 70, f"Order ID: {order.id}")
+    pdf.drawString(30, height - 90, f"Order Date: {order.order_date}")
+
+    # From Address
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(30, height - 130, "From")
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(30, height - 150, "Music Beats")
+    pdf.drawString(30, height - 170, "Kerala, Calicut")
+    pdf.drawString(30, height - 190, "Kozhikode, Mankavu")
+    pdf.drawString(30, height - 210, "India")
+    pdf.drawString(30, height - 230, "Phone: (123) 456-7890")
+    pdf.drawString(30, height - 250, "Email: email@domain.com")
+
+    # Billing Address
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(300, height - 130, "Bill To")
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(300, height - 150, order.user.username)
+    pdf.drawString(300, height - 170, order_address.address_line)
+    pdf.drawString(300, height - 190, f"{order_address.city}, {order_address.state}")
+    pdf.drawString(300, height - 210, order_address.postal_code)
+    pdf.drawString(300, height - 230, order_address.country)
+    pdf.drawString(300, height - 250, f"Phone: {order_address.phone}")
+    pdf.drawString(300, height - 270, f"Email: {order.user.email}")
+
+    # Order Items
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(30, height - 300, "Order Items")
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawString(30, height - 320, "Qty")
+    pdf.drawString(80, height - 320, "Product")
+    pdf.drawString(300, height - 320, "Unit Price")
+    pdf.drawString(450, height - 320, "Total")
+
+    pdf.setFont("Helvetica", 12)
+    y = height - 340
+    for item in order_items:
+        pdf.drawString(30, y, str(item.quantity))
+        pdf.drawString(80, y, item.product.title)
+        pdf.drawString(300, y, f"₹{item.product.price}")
+        pdf.drawString(450, y, f"₹{item.price}")
+        y -= 20
+
+    # Total
+    y -= 20
+    pdf.drawString(300, y, "Subtotal")
+    pdf.drawString(450, y, f"₹{order.total_price + order.coupon_discount}")
+    
+    if order.coupon_discount > 0:
+        y -= 20
+        pdf.drawString(300, y, "Coupon Discount")
+        pdf.drawString(450, y, f"-₹{order.coupon_discount}")
+
+    y -= 20
+    pdf.drawString(300, y, "Total")
+    pdf.drawString(450, y, f"₹{order.total_price}")
+
+    pdf.showPage()
+    pdf.save()
+    return response
 
 # Order Cancelling view
 @login_required(login_url='ulogin')

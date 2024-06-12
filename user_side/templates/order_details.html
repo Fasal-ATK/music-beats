@@ -4,6 +4,7 @@
 {% block head %}
 <title>Order Details</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
 {% endblock %}
 
 {% block body %}
@@ -23,6 +24,7 @@
     </div>
 </section>
 <!-- End Banner Area -->
+
 {% if messages %}
     {% for message in messages %}
         <div class="alert alert-{{ message.tags }}">
@@ -34,20 +36,22 @@
 <section class="order_details mb-5">
     <div class="container">
         <div class="order_details_table">
-            <h2>Ordered Items</h2> 
+            <div class="d-flex justify-content-between">
+                <h2>Ordered Items</h2>
+                <button class="btn btn-primary" data-toggle="modal" data-target="#invoiceModal">Download Invoice</button>
+            </div><br>
             <h2 style="text-align: right;">Order Status: {{ order.order_status }}</h2>
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Image</th>
-                        <th>Product</th>
+                        <th>Product Image</th>
+                        <th>Name</th>
                         <th>Price</th>
                         <th>Quantity</th>
                         <th>Total Price</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Loop through each ordered item to display -->
                     {% for item in order_items %}
                         <tr>
                             <td><img src="{{ item.product.image.url }}" alt="{{ item.product.title }}" style="width: 80px;"></td>
@@ -67,7 +71,6 @@
             <p style="text-align: right;">Coupon discount = {{ order.coupon_discount }}</p>
             <p style="text-align: right;">Coupon Code = {{ order.coupon_code }}</p>
             <h2 style="text-align: right;">Total Price = <u>{{ order.total_price }}</u>rs</h2>
-
             {% endif %}
 
             <div class="order_address mt-5">
@@ -84,8 +87,11 @@
 
             <div style="text-align: center; margin-top: 20px;">
                 {% if order.order_status == 'return_requested' %}
+                
                     <p>Return Requested</p>
+
                 {% elif order.order_status == 'completed' %}
+
                     {% if is_order_older_than_week %}
                         <p>Thank you for your purchase</p>
                     {% else %}
@@ -95,21 +101,205 @@
                             <button type="submit" class="btn btn-primary">Return Product</button>
                         </form>
                     {% endif %}
+
                 {% elif can_cancel_order %}
+
                     <form method="post" action="{% url 'order-cancel' order.id %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</button>
                     </form>
-                {% elif order.order_status == 'canceled' %}
-                    <strong><p style="color: red;">Order Canceled</p></strong>
+                
+                {% elif order.order_status == 'pending' %}
+
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button id="completeOrderButton" class="btn btn-success">Complete Order</button>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
 </section>
+
+<!-- Invoice Modal -->
+<div class="modal fade" id="invoiceModal" tabindex="-1" role="dialog" aria-labelledby="invoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="invoiceModalLabel">Invoice</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Invoice HTML here -->
+                <section class="py-3 py-md-5">
+                    <div class="container">
+                        <div class="row justify-content-center">
+                            <div class="col-12 col-lg-12 col-xl-12 col-xxl-10">
+                                <div class="row gy-3 mb-3">
+                                    <div class="col-6">
+                                        <h2 class="text-uppercase text-endx m-0">Invoice</h2>
+                                    </div>
+                                    <!-- <div class="col-6">
+                                        <a class="d-block text-end" href="#!">
+                                            <img src="{% static 'path_to_logo.png' %}" class="img-fluid" alt="Logo" width="135" height="44">
+                                        </a>
+                                    </div> -->
+                                    <div class="col-12">
+                                        <h4>From</h4>
+                                        <address>
+                                            <strong>Music beats</strong><br>
+                                            Kerela,Calicut<br>
+                                            Kozhikkode,Mankavu<br>
+                                            India<br>
+                                            Phone: (123) 456-7890<br>
+                                            Email: email@domain.com
+                                        </address>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-12 col-sm-6 col-md-8">
+                                        <h4>Bill To</h4>
+                                        <address>
+                                            <strong>{{ order.user.username }}</strong><br>
+                                            {{ order_address.address_line }}<br>
+                                            {{ order_address.city }}, {{ order_address.state }}<br>
+                                            {{ order_address.postal_code }}<br>
+                                            {{ order_address.country }}<br>
+                                            Phone: {{ order_address.phone }}<br>
+                                            Email: {{ order.user.email }}
+                                        </address>
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-md-4">
+                                        <h4 class="row">
+                                            <span class="col-6">Invoice #</span>
+                                            <span class="col-6 text-sm-end">INT-{{ order.id }}</span>
+                                        </h4>
+                                        <div class="row">
+                                            <span class="col-6">Account</span>
+                                            <span class="col-6 text-sm-end">{{ order.user.id }}</span>
+                                            <span class="col-6">Order ID</span>
+                                            <span class="col-6 text-sm-end">#{{ order.id }}</span>
+                                            <span class="col-6">Invoice Date</span>
+                                            <span class="col-6 text-sm-end">{{ order.order_date }}</span>
+                                            <span class="col-6">Due Date</span>
+                                            <span class="col-6 text-sm-end">{{ order.order_date }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <div class="table-responsive">
+                                            <table class="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th scope="col" class="text-uppercase">Qty</th>
+                                                        <th scope="col" class="text-uppercase">Product</th>
+                                                        <th scope="col" class="text-uppercase text-end">Unit Price</th>
+                                                        <th scope="col" class="text-uppercase text-end">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="table-group-divider">
+                                                    {% for item in order_items %}
+                                                    <tr>
+                                                        <th scope="row">{{ item.quantity }}</th>
+                                                        <td>{{ item.product.title }}</td>
+                                                        <td class="text-end">{{ item.product.price }}</td>
+                                                        <td class="text-end">{{ item.price }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                    <tr>
+                                                        <td colspan="3" class="text-end">Subtotal</td>
+                                                        <td class="text-end">{{ actual_price }}</td>
+                                                    </tr>
+                                                    {% if not order.coupon_discount == 0 %}
+                                                    <tr>
+                                                        <td colspan="3" class="text-end">Coupon Code</td>
+                                                        <td class="text-end">{{ order.coupon_code }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td colspan="3" class="text-end">Coupon Discount</td>
+                                                        <td class="text-end">{{ order.coupon_discount }}</td>
+                                                    </tr>
+                                                    {% endif %}
+                                                    <tr>
+                                                        <td colspan="3" class="text-end">Shipping</td>
+                                                        <td class="text-end">Free</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th scope="row" colspan="3" class="text-uppercase text-end">Total</th>
+                                                        <td class="text-end">{{ order.total_price }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12 text-end">
+                                        <button type="button" class="btn btn-primary mb-3" onclick="downloadInvoice()">Download Invoice</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+
 {% endblock %}
 
 {% block foot %}
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+$(document).ready(function() {
+    $('#completeOrderButton').click(function() {
+        // Open Razorpay modal and proceed with payment
+        var options = {
+            key: 'rzp_test_NXuTzGqouVQtF6',
+            amount: "{{ order.total_price }}" * 100,
+            currency: 'INR',
+            name: 'Music Beats',
+            description: 'Complete Order Payment',
+            handler: function(response) {
+                // Handle Razorpay payment success
+                alert('Payment Successful');
+
+                // Send a POST request to complete the order
+                $.ajax({
+                    type: 'POST',
+                    url: '{% url "complete-order" %}',
+                    data: {
+                        csrfmiddlewaretoken: '{{ csrf_token }}',
+                        order_id: '{{ order.id }}' // Pass the order ID here
+                    },
+                    success: function(response) {
+                        // Handle success, if needed
+                        alert('Order completed successfully');
+                        // Reload the page to reflect changes
+                        location.reload();
+                    },
+                    error: function(xhr, status, error) {
+                        // Handle error
+                        console.error(xhr.responseText);
+                        alert('An error occurred while completing the order. Please try again.');
+                    }
+                });
+            }
+        };
+        var rzp1 = new Razorpay(options);
+        rzp1.open();
+    });
+});
+</script>
+
+
 <script>
     document.getElementById('addressHeader').addEventListener('click', function() {
         var addressDetails = document.getElementById('addressDetails');
@@ -126,5 +316,11 @@
             document.getElementById('addressHeader').innerHTML = 'Show Address <i id="arrow" class="fas fa-chevron-down"></i>';
         }
     });
+
+    function downloadInvoice() {
+        var orderId = "{{ order.id }}";
+        var url = "{% url 'generate_invoice_pdf' order.id %}";
+        window.open(url, '_blank');
+    }
 </script>
 {% endblock %}

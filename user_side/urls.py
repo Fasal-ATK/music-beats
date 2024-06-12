@@ -39,6 +39,9 @@ urlpatterns = [
     
     path('order-page/',views.Order_Page,name='order-page'),
     path('order-details/<int:order_id>/',views.Order_Details,name='order-details'),
+    path('complete-order/', views.Complete_Pending_Order, name='complete-order'),
+
+    path('generate_invoice_pdf/<int:order_id>/', views.generate_invoice_pdf, name='generate_invoice_pdf'),
     path('order-cancel/<int:order_id>',views.Order_Cancelling,name='order-cancel'),
     path('return-product/<int:order_id>',views.Return_Products,name='return-product')
 ]

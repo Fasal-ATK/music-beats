@@ -85,23 +85,31 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in order_items %}
+                        {% for item_with_total in order_items_with_total %}
                         <tr>
-                            <td>{{ item.product.title }}</td>
+                            <td>{{ item_with_total.item.product.title }}</td>
                             <td>{{ order.get_order_status_display }}</td>
                             <td>{{ order.payment_method }}</td>
                             <td>{{ order.order_date }}</td>
-                            <td>{{ item.quantity }}</td>
-                            <td>{{ item.product.price }}.rs</td>
-                            <td>{{ item.price }}.rs</td>
+                            <td>{{ item_with_total.item.quantity }}</td>
+                            <td>{{ item_with_total.item.product.price }}.rs</td>
+                            <td>{{ item_with_total.total_price }}.rs</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                
             </div>
 
             <div class="total-price">
-                Total Price: {{ order.total_price }}.rs
+                {% if coupon_discount == 0 %}
+                Total Price : {{ order.total_price }}.rs
+                {% else %}
+                Sub-total : {{sub_total}} <br>
+                Coupon Code : <u>{{coupon_code}}</u> <br>
+                Coupon Discount :<u> {{coupon_discount}}</u> <br>
+                Total Price: <u>{{ order.total_price }}.rs</u>
+                {% endif %}
             </div>
 
             <div class="order-address">

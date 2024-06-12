@@ -121,7 +121,8 @@
                                     <select name="payment_method" required>
                                         <option value="">Select Payment Method</option>
                                         <option value="razor_pay">Razor Pay</option>
-                                        <option value="cash_on_delivery">Cash on Delivery</option>
+                                        {% if user_wallet_balance > total_price %} <option value="wallet">Wallet</option> {% endif %}
+                                        {% if total_price < 5000 %} <option value="cash_on_delivery">Cash on Delivery</option> {% endif %}
                                     </select>
                                 </div>
                             </div>
@@ -142,6 +143,7 @@
                                     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addAddressModal">Add Address</button>
                                 </div>
                             </div>
+                            <input type="hidden" id="payment_status" name="payment_status" value="pending">
                             <button id="rzp-button1" class="btn primary-btn">Place order</button>
                         </form>
                         
@@ -206,19 +208,18 @@
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
-    // Function to initialize and open Razorpay checkout
     function openRazorpayCheckout() {
         var totalAmount = "{% if request.session.coupon_applied %}{{ request.session.coupon_applied.discounted_price }}{% else %}{{ total_price }}{% endif %}";
-        
+
         var options = {
             "key": "rzp_test_NXuTzGqouVQtF6", // Replace with your Key ID
             "amount": totalAmount * 100, // Amount in currency subunits
             "currency": "INR",
             "name": "music_beats",
             "description": "Test Transaction",
-            "order_id": "{{ order.id }}", // Replace with actual order ID
             "handler": function(response) {
                 console.log('Payment successful:', response);
+                document.getElementById('payment_status').value = 'success';
                 document.getElementById('checkout_form').submit();
             },
             "prefill": {
@@ -244,6 +245,8 @@
         rzp1.on('payment.failed', function(response) {
             console.error('Payment failed:', response.error);
             alert('Payment failed: ' + response.error.description);
+            document.getElementById('payment_status').value = 'failed';
+            document.getElementById('checkout_form').submit();
         });
 
         try {
@@ -253,20 +256,32 @@
         }
     }
 
-    // Event listener for the payment button
     document.getElementById('rzp-button1').addEventListener('click', function(e) {
         e.preventDefault();
 
         var paymentMethod = document.querySelector('select[name="payment_method"]').value;
         var selectedAddress = document.querySelector('#address').value;
-        if (selectedAddress && paymentMethod === "razor_pay") {
+
+        if (!selectedAddress) {
+            alert('Please select an address before proceeding.');
+            return;
+        }
+
+        if (!paymentMethod) {
+            alert('Please select a payment method before proceeding.');
+            return;
+        }
+
+        if (paymentMethod === "razor_pay") {
             console.log('Opening Razorpay checkout');
             openRazorpayCheckout();
         } else {
+            document.getElementById('payment_status').value = 'success';
             document.getElementById('checkout_form').submit();
         }
     });
 </script>
+
 
 
 
