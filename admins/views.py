@@ -16,7 +16,10 @@ from django.db.models import Sum, Count
 
 from .forms import CategoryForm, ProductForm, BrandForm
 from .models import Category, Product, Brand, Coupon
-from user_side.models import Users, Order, OrderItem, OrderAddress,Wallet
+from user_side.models import Users, Order, OrderItem, OrderAddress,Wallet, WalletHistory
+
+from django.db import transaction
+
 # Create your views here.
 
 
@@ -64,44 +67,30 @@ def Block_User(request,id):
 #-------------------------------------------------- Dashboard ---------------------------------------------------
 
 def Dashboard(request):
-    # Get current month and year
-    current_month = datetime.now().month
-    current_year = datetime.now().year
-    
-    # Filter orders for the current month
-    orders_this_month = Order.objects.filter(order_date__month=current_month, order_date__year=current_year)
-    
-    # Calculate total sales for each product
-    product_sales = OrderItem.objects.filter(order__in=orders_this_month).values('product__title').annotate(total_sales=Sum('quantity')).order_by('-total_sales')[:10]
-    
-    # Calculate total sales for each category
-    category_sales = OrderItem.objects.filter(order__in=orders_this_month).values('product__category__name').annotate(total_sales=Sum('quantity')).order_by('-total_sales')[:10]
-    
-    # Calculate total discount given
-    total_discount = orders_this_month.aggregate(total_discount=Sum('coupon_discount'))['total_discount'] or 0
-    
-    # Calculate total sales
-    total_sales = orders_this_month.aggregate(total_sales=Sum('total_price'))['total_sales'] or 0
-    
-    # Prepare data for chart
-    order_dates = []
-    order_counts = []
-    for i in range(1, 13):
-        orders_count = Order.objects.filter(order_date__month=i, order_date__year=current_year).count()
-        order_dates.append(calendar.month_name[i])
-        order_counts.append(orders_count)
-    
+    top_products = OrderItem.objects.values('product__title').annotate(total_quantity=Sum('quantity')).order_by('-total_quantity')[:10]
+    product_labels = [item['product__title'] for item in top_products]
+    product_counts = [item['total_quantity'] for item in top_products]
+
+    top_categories = OrderItem.objects.values('product__category__name').annotate(total_quantity=Sum('quantity')).order_by('-total_quantity')[:10]
+    category_labels = [item['product__category__name'] for item in top_categories]
+    category_counts = [item['total_quantity'] for item in top_categories]
+
+    orders = Order.objects.filter(order_status='completed')
+    sales_by_month = orders.extra(select={'month': 'EXTRACT(month FROM order_date)'}).values('month').annotate(total_sales=Sum('total_price')).order_by('month')
+    months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    sales_data = [0] * 12
+    for sale in sales_by_month:
+        sales_data[int(sale['month']) - 1] = float(sale['total_sales'])
+
     context = {
-        'order_dates': order_dates,
-        'order_counts': order_counts,
-        'best_selling_products': product_sales,
-        'best_selling_categories': category_sales,
-        'total_discount': total_discount,
-        'total_sales': total_sales,
-        'total_orders': orders_this_month.count()
+        'product_labels': json.dumps(product_labels),
+        'product_counts': json.dumps(product_counts),
+        'category_labels': json.dumps(category_labels),
+        'category_counts': json.dumps(category_counts),
+        'months': json.dumps(months),
+        'sales_data': json.dumps(sales_data),
     }
     return render(request, 'dashboard.html', context)
-
 
 
 @login_required(login_url='adminlogin')
@@ -430,15 +419,30 @@ def Accept_or_Reject_Return(request, order_id, action):
     except Order.DoesNotExist:
         return HttpResponseNotFound("Order not found")
 
+
 def Refund(request, order_id):
     if request.method == 'POST':
         order = get_object_or_404(Order, id=order_id)
-        user = order.user
-        user_wallet, created = Wallet.objects.get_or_create(user=user)
-        user_wallet.balance += order.total_price
-        user_wallet.save()
-        order.order_status = 'returned'
-        order.save()  
+        user_wallet=get_object_or_404(Wallet,user=order.user)
+        with transaction.atomic():
+            user_wallet.balance += order.total_price
+            user_wallet.save()
+
+            #wallet history
+            WalletHistory.objects.create(
+                wallet=user_wallet,
+                amount=order.total_price,
+                transaction_type='credit',
+                description='Return Order refunded'
+                )
+
+            order.order_status = 'returned'
+            order.save()
+        messages.success(request, "The order has been refunded successfully.")
+        return redirect('orders-detail', order_id=order_id)
+    
+    # If the request method is not POST, redirect to the order details page
+    messages.error(request, "Invalid request method.")
     return redirect('orders-detail', order_id=order_id)
 
 # -------------------------------------------------- Coupon -------------------------------------------------
@@ -479,3 +483,49 @@ def Coupon_Status(request,coupon_id):
     coupon.active = not coupon.active
     coupon.save()
     return redirect('coupons')
+
+
+@login_required(login_url='adminlogin')
+@csrf_protect
+def Edit_Coupon(request):
+    if request.method == 'POST':
+        coupon_id = request.POST.get('coupon_id')
+        coupon_code = request.POST.get('coupon_code')
+        expire_date = request.POST.get('expire_date')
+        discount_price = request.POST.get('discount_price')
+        minimum_amount = request.POST.get('minimum_amount')
+        active = 'active' in request.POST
+        
+        expire_date = timezone.make_aware(datetime.strptime(expire_date, "%Y-%m-%dT%H:%M"))
+
+        try:
+            coupon = Coupon.objects.get(id=coupon_id)
+            coupon.coupon_code = coupon_code
+            coupon.expire_date = expire_date
+            coupon.discount_price = discount_price
+            coupon.minimum_amount = minimum_amount
+            coupon.active = active
+            coupon.save()
+            return JsonResponse({'success': True})
+        except Coupon.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Coupon not found'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    if request.method == 'GET':
+        coupon_id = request.GET.get('coupon_id')
+        try:
+            coupon = Coupon.objects.get(id=coupon_id)
+            data = {
+                'id': coupon.id,
+                'coupon_code': coupon.coupon_code,
+                'expire_date': coupon.expire_date.strftime("%Y-%m-%d %H:%M:%S"),
+                'discount_price': coupon.discount_price,
+                'minimum_amount': coupon.minimum_amount,
+                'active': coupon.active,
+            }
+            return JsonResponse({'success': True, 'coupon': data})
+        except Coupon.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Coupon not found'})
+
+    return JsonResponse({'success': False, 'error': 'Invalid request'})

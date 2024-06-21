@@ -25,11 +25,11 @@ urlpatterns = [
     path('wishlist/remove/<int:wishlistitem_id>/', views.Remove_Wishlist, name='remove-wishlist-item'),
 
     path('profile/',views.User_Profile,name='profile'),
-    path('add-address/',views.Add_Address,name='add-address'),     
+    path('add-address/',views.Add_Address,name='add-address'),
     path('edit-address/<int:address_id>/',views.Edit_Address,name='edit-address'),
     path('delete-address/<int:address_id>',views.Delete_Address,name='delete-address'),
-    path('add-money/',views.Add_Wallet_Money,name='add-money'),
     path('change-password/',views.Change_Password,name='change-password'),
+    path('add-money/',views.Add_Wallet_Money,name='add-money'),
 
     path('checkout/',views.Product_Checkout,name='checkout'),
     path('place-order/',views.Place_Order,name='place-order'),
@@ -44,6 +44,7 @@ urlpatterns = [
     path('generate_invoice_pdf/<int:order_id>/', views.generate_invoice_pdf, name='generate_invoice_pdf'),
     path('order-cancel/<int:order_id>',views.Order_Cancelling,name='order-cancel'),
     path('return-product/<int:order_id>',views.Return_Products,name='return-product')
+
 ]
 
 

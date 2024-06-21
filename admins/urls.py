@@ -35,10 +35,10 @@ urlpatterns = [
     path('accept-reject/<int:order_id>/<str:action>/', views.Accept_or_Reject_Return, name='accept-reject'),
     path('refund/<int:order_id>/',views.Refund,name='refund'),
 
-    path('coupons/',views.Coupon_Manager,name='coupons'),
-    path('add-coupon/',views.Add_Coupon,name='add-coupon'),
-    path('coupon-status/<int:coupon_id>',views.Coupon_Status,name='coupon-status'),
-
+    path('coupons/', views.Coupon_Manager, name='coupons'),
+    path('coupons/add/', views.Add_Coupon, name='add-coupon'),
+    path('coupons/status/<int:coupon_id>/', views.Coupon_Status, name='coupon-status'),
+    path('coupons/edit/', views.Edit_Coupon, name='edit-coupon'),
 ]
 
 # fasal = 12345678

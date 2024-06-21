@@ -14,12 +14,12 @@ from django.template.loader import render_to_string
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-import razorpay
+import razorpay  
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
 
-from user_side.models import CouponUsage, Users, Cart, CartItem, Address, Order, OrderItem, OrderAddress, Wallet, Wishlist
+from user_side.models import CouponUsage, Users, Cart, CartItem, Address, Order, OrderItem, OrderAddress, Wallet, WalletHistory, Wishlist
 from admins.models import Coupon, Product, Category
 from user_side.forms import AddressForm
 
@@ -284,12 +284,13 @@ def Remove_Wishlist(request, wishlistitem_id):
 #-------------------------------------  Profile ------------------------------
 
 
-# User profile view
 @login_required(login_url='ulogin')
 def User_Profile(request):
     user_address = Address.objects.filter(user=request.user)
-    wallet = Wallet.objects.filter(user=request.user).values_list('balance', flat=True).first()
-    return render(request, 'profile.html', {'user_address': user_address,'wallet':wallet})
+    wallet = get_object_or_404(Wallet, user=request.user)  # Fetch the wallet object
+    history = WalletHistory.objects.filter(wallet=wallet)
+    return render(request, 'profile.html', {'user_address': user_address, 'wallet': wallet, 'history': history})
+
 
 # Add address view
 @login_required(login_url='ulogin')
@@ -340,14 +341,6 @@ def Delete_Address(request, address_id):
         except Address.DoesNotExist:
             return JsonResponse({'error': 'Address does not exist'}, status=404)
 
-@login_required(login_url='ulogin')
-def Add_Wallet_Money(request):
-    if request.method == 'POST':
-        user_wallet = get_object_or_404(Wallet, user=request.user)
-        money = request.POST.get('amount')
-        user_wallet.balance += int(money)  # Ensure money is converted to an integer
-        user_wallet.save()
-    return redirect('profile')
 
 # Change password view
 @never_cache
@@ -370,7 +363,29 @@ def Change_Password(request):
     return redirect('profile')
 
 
+@login_required(login_url='ulogin')
+def Add_Wallet_Money(request):
+    if request.method == 'POST':
+        user_wallet = get_object_or_404(Wallet, user=request.user)
+        money = int(request.POST.get('amount'))  # Ensure money is converted to an integer
+        
+        # Update wallet balance
+        user_wallet.balance += money
+        user_wallet.save()
+
+        # Create wallet history record
+        WalletHistory.objects.create(
+            wallet=user_wallet,
+            amount=money,
+            transaction_type='credit',
+            description='Money added to wallet'
+        )
+    return redirect('profile')
+
+
+
 #---------------------------------------------  Checkout_Page ------------------------------------
+
 
 @login_required(login_url='ulogin')
 def Product_Checkout(request):
@@ -514,6 +529,18 @@ def Place_Order(request):
                 CouponUsage.objects.create(user=request.user, coupon=coupon)
                 del request.session['coupon_applied']
 
+            # Create wallet history record if payment is made through wallet
+            if payment_method == 'wallet':
+                wallet = get_object_or_404(Wallet, user=request.user)
+                wallet.balance -= cart_total_price - discount  # Deduct the amount from the wallet balance
+                wallet.save()
+                WalletHistory.objects.create(
+                    wallet=wallet,
+                    amount=cart_total_price - discount,
+                    transaction_type='debit',
+                    description='Ordered a product'
+                )
+
             # Clear the cart
             user_cart.cartitem_set.all().delete()
 
@@ -549,7 +576,6 @@ def Order_Page(request):
     user_orders = Order.objects.filter(user=request.user).order_by('-id')
     return render(request, 'order.html', {'user_orders': user_orders})
 
-
 @login_required(login_url='ulogin')
 def Order_Details(request, order_id):
     order = get_object_or_404(Order, id=order_id)
@@ -571,7 +597,6 @@ def Order_Details(request, order_id):
         'actual_price': actual_price,
         'is_order_older_than_week': is_order_older_than_week,
     })
-
 
 @login_required(login_url='ulogin')
 def generate_invoice_pdf(request, order_id):
@@ -669,15 +694,21 @@ def Order_Cancelling(request, order_id):
             with transaction.atomic():
                 user_wallet.balance += order.total_price
                 user_wallet.save()
+        # Create wallet history record if payment is made through wallet
+                WalletHistory.objects.create(
+                wallet=user_wallet,
+                amount=order.total_price,
+                transaction_type='credit',
+                description='Ordered Canceled')
 
         order.order_status = 'canceled'
         order.save()
+        
         messages.success(request, 'Order canceled successfully')
     else:
         messages.error(request, 'Cannot cancel order')
 
     return redirect('order-details', order_id=order.id)
-
 
 @login_required(login_url='ulogin')
 def Return_Products(request, order_id):

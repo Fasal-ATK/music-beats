@@ -3,72 +3,128 @@
 
 {% block head %} 
 <title>Admin Dashboard</title> 
+<style>
+    .chart-container {
+        position: relative;
+        margin: auto;
+        height: 400px;
+        width: 400px;
+    }
+    .wide-chart-container {
+        position: relative;
+        margin: auto;
+        height: 400px;
+        width: 800px;  /* Increase the width for the line chart */
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
+    <h2><u>Admin Dashboard</u></h2>
+    <br><br>
     <div class="row">
         <div class="col-md-6">
-            <h2>Chart with filter</h2>
-            <canvas id="orderChart"></canvas>
+            <h3>Top 10 Selling Products</h3>
+            <div class="chart-container">
+                <canvas id="pie-chart"></canvas>
+            </div>
         </div>
         <div class="col-md-6">
-            <h2>Best Selling Products (Top 10)</h2>
-            <ul>
-                {% for order_item in best_selling_products %}
-                    <li>{{ order_item.product__title }} - Total Sales: {{ order_item.total_sales }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-6">
-            <h2>Best Selling Categories (Top 10)</h2>
-            <ul>
-                {% for category_sale in best_selling_categories %}
-                    <li>{{ category_sale.product__category__name }} - Total Sales: {{ category_sale.total_sales }}</li>
-                {% endfor %}
-            </ul>
+            <h3>Top 10 Selling Categories</h3>
+            <div class="chart-container">
+                <canvas id="donut-chart"></canvas>
+            </div>
         </div>
     </div>
-    <div class="row">
+    <br><br>
+    <div class="row mt-4">
         <div class="col-md-12">
-            <h2>Generate Ledger Book</h2>
-            <p>(Optional: Include this section only if ledger book generation is implemented)</p>
+            <h3>Sales Graph</h3>
+            <a href="{% url 'sales' %}" class="btn btn-success">Sales Report</a>
+            <div class="wide-chart-container">
+                <canvas id="line-chart"></canvas>
+            </div>
         </div>
     </div>
+    <br><br><br><br>
+</div>
+
+<!-- Debugging Output -->
+<div style="display:none;">
+    <pre>
+        Product Labels: {{ product_labels }}
+        Product Counts: {{ product_counts }}
+        Category Labels: {{ category_labels }}
+        Category Counts: {{ category_counts }}
+        Months: {{ months }}
+        Sales Data: {{ sales_data }}
+    </pre>
 </div>
 {% endblock %}
 
 {% block script %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    var orderDates = JSON.parse('{{ order_dates_json|escapejs }}');
-    var orderCounts = JSON.parse('{{ order_counts_json|escapejs }}');
+    // Data passed from Django view
+    var productLabels = JSON.parse('{{ product_labels|escapejs }}');
+    var productCounts = JSON.parse('{{ product_counts|escapejs }}');
+    var categoryLabels = JSON.parse('{{ category_labels|escapejs }}');
+    var categoryCounts = JSON.parse('{{ category_counts|escapejs }}');
+    var months = JSON.parse('{{ months|escapejs }}');
+    var salesData = JSON.parse('{{ sales_data|escapejs }}');
 
-    var ctx = document.getElementById('orderChart').getContext('2d');
-    var myChart = new Chart(ctx, {
+    console.log("Product Labels:", productLabels);
+    console.log("Product Counts:", productCounts);
+    console.log("Category Labels:", categoryLabels);
+    console.log("Category Counts:", categoryCounts);
+    console.log("Months:", months);
+    console.log("Sales Data:", salesData);
+
+    // Pie Chart for top 10 selling products
+    var pieData = {
+        labels: productLabels,
+        datasets: [{
+            data: productCounts,
+            backgroundColor: ['red', 'blue', 'yellow', 'green', 'purple', 'orange', 'pink', 'cyan', 'lime', 'magenta']
+        }]
+    };
+
+    // Donut Chart for top 10 selling categories
+    var donutData = {
+        labels: categoryLabels,
+        datasets: [{
+            data: categoryCounts,
+            backgroundColor: ['red', 'blue', 'yellow', 'green', 'purple', 'orange', 'pink', 'cyan', 'lime', 'magenta']
+        }]
+    };
+
+    // Line Chart for sales data by month
+    var lineData = {
+        labels: months,
+        datasets: [{
+            label: 'Sales',
+            data: salesData,
+            borderColor: 'blue',
+            borderWidth: 1,
+            fill: false
+        }]
+    };
+
+    // Render charts
+    var pieChart = new Chart(document.getElementById('pie-chart'), {
+        type: 'pie',
+        data: pieData
+    });
+
+    var donutChart = new Chart(document.getElementById('donut-chart'), {
+        type: 'doughnut',
+        data: donutData
+    });
+
+    var lineChart = new Chart(document.getElementById('line-chart'), {
         type: 'line',
-        data: {
-            labels: orderDates,
-            datasets: [{
-                label: 'Orders',
-                data: orderCounts,
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                yAxes: [{
-                    ticks: {
-                        beginAtZero: true
-                    }
-                }]
-            }
-        }
+        data: lineData
     });
 </script>
-
 {% endblock %}

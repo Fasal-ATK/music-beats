@@ -10,7 +10,7 @@
 {% block content %}
 <div class="container">
     <h2>Coupon Manager</h2>
-    <button type="button" class="btn btn-primary mb-3" id="addCouponBtn">
+    <button type="button" class="btn btn-info mb-3 float-right" id="addCouponBtn">
         Add Coupon
     </button>
     <table class="table">
@@ -24,42 +24,42 @@
                 <th>Action</th>
             </tr>
         </thead>
-<!-- Updated table body -->
-<tbody>
-    {% for coupon in coupons %}
-    <tr>
-        <td>{{ coupon.coupon_code }}</td>
-        <td>{{ coupon.created_at }}</td>
-        <td>{{ coupon.expire_date }}</td>
-        <td>{{ coupon.discount_price }}</td>
-        <td>{{ coupon.minimum_amount }}</td>
-        <td>
-            {% if coupon.active %}
-                <a href="{% url 'coupon-status' coupon.id %}" class="btn btn-success">Activated</a>
-            {% else %}
-                <a href="{% url 'coupon-status' coupon.id %}" class="btn btn-danger">Deactivated</a>
-            {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
-</tbody>
-
+        <tbody>
+            {% for coupon in coupons %}
+            <tr>
+                <td>{{ coupon.coupon_code }}</td>
+                <td>{{ coupon.created_at }}</td>
+                <td>{{ coupon.expire_date }}</td>
+                <td>{{ coupon.discount_price }}</td>
+                <td>{{ coupon.minimum_amount }}</td>
+                <td>
+                    <button type="button" class="btn btn-primary editCouponBtn" data-id="{{ coupon.id }}">Edit</button>
+                    {% if coupon.active %}
+                        <a href="{% url 'coupon-status' coupon.id %}" class="btn btn-success">Activated</a>
+                    {% else %}
+                        <a href="{% url 'coupon-status' coupon.id %}" class="btn btn-danger">Deactivated</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
 </div>
 
-<!-- Add Coupon Modal -->
-<div id="addCouponModal" class="modal">
+<!-- Add/Edit Coupon Modal -->
+<div id="couponModal" class="modal">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add Coupon</h5>
+                <h5 class="modal-title" id="modalTitle">Add Coupon</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <form method="POST" id="addCouponForm" action="{% url 'add-coupon' %}">
+                <form method="POST" id="couponForm" action="{% url 'add-coupon' %}">
                     {% csrf_token %}
+                    <input type="hidden" id="coupon_id" name="coupon_id">
                     <div class="form-group">
                         <label for="coupon_code">Coupon Code</label>
                         <input type="text" class="form-control" id="coupon_code" name="coupon_code" required>
@@ -80,7 +80,7 @@
                         <input type="checkbox" class="form-check-input" id="active" name="active" checked>
                         <label class="form-check-label" for="active">Active</label>
                     </div>
-                    <button type="submit" class="btn btn-primary">Add Coupon</button>
+                    <button type="submit" class="btn btn-primary">Save Coupon</button>
                 </form>
             </div>
         </div>
@@ -101,33 +101,58 @@
     }
 
     // Get the modal element
-    var addCouponModal = document.getElementById("addCouponModal");
+    var couponModal = document.getElementById("couponModal");
 
     // Get the button that opens the modal
     var addCouponBtn = document.getElementById("addCouponBtn");
 
     // Get the <span> element that closes the modal
-    var closeBtn = addCouponModal.querySelector(".close");
+    var closeBtn = couponModal.querySelector(".close");
 
     // When the user clicks the button, open the modal 
     addCouponBtn.onclick = function() {
-        addCouponModal.style.display = "block";
+        $('#modalTitle').text('Add Coupon');
+        $('#couponForm').attr('action', '{% url "add-coupon" %}');
+        $('#couponForm')[0].reset();
+        $('#coupon_id').val('');
+        couponModal.style.display = "block";
     }
 
     // When the user clicks on <span> (x), close the modal
     closeBtn.onclick = function() {
-        addCouponModal.style.display = "none";
+        couponModal.style.display = "none";
     }
 
     // When the user clicks anywhere outside of the modal, close it
     window.onclick = function(event) {
-        if (event.target == addCouponModal) {
-            addCouponModal.style.display = "none";
+        if (event.target == couponModal) {
+            couponModal.style.display = "none";
         }
     }
 
+    // Edit button handler
+    $('.editCouponBtn').click(function() {
+        var couponId = $(this).data('id');
+        $.ajax({
+            url: '{% url "edit-coupon" %}',
+            type: 'GET',
+            data: { coupon_id: couponId },
+            success: function(data) {
+                $('#modalTitle').text('Edit Coupon');
+                $('#couponForm').attr('action', '{% url "edit-coupon" %}');
+                $('#coupon_id').val(data.coupon.id);
+                $('#coupon_code').val(data.coupon.coupon_code);
+                $('#expire_date').val(data.coupon.expire_date.replace(' ', 'T'));
+                $('#discount_price').val(data.coupon.discount_price);
+                $('#minimum_amount').val(data.coupon.minimum_amount);
+                $('#active').prop('checked', data.coupon.active);
+                couponModal.style.display = "block";
+            }
+        });
+    });
+
     // Handle form submission
-    $('#addCouponForm').submit(function(event) {
+    $('#couponForm').submit(function(event) {
         event.preventDefault(); // Prevent default form submission
 
         // Submit form via AJAX
@@ -137,7 +162,10 @@
             data: $(this).serialize(),
             success: function(response) {
                 if (response.success) {
-                    showSuccessMessage('Coupon added successfully!');
+                    showSuccessMessage('Coupon saved successfully!');
+                    setTimeout(function() {
+                        location.reload(); // Reload the page to update the table
+                    }, 1000);
                 } else {
                     // Handle error
                     alert(response.error || 'An error occurred.');
@@ -150,4 +178,3 @@
     });
 </script>
 {% endblock %}
-

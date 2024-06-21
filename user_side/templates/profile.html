@@ -71,7 +71,9 @@
                             </tr>
                         </table>
                         <a href="" class="pass" id="changePasswordLink" style="color: blue;">change password?</a>
-                        <a href="{% url 'order-page' %}" class="btn btn-dark float-right">My Order</a>
+                        <a href="{% url 'order-page' %}" class="btn btn-dark float-right ">My Order</a>
+                        <a href="#" class="btn btn-dark float-right mr-2" data-toggle="modal" data-target="#walletHistoryModal">Wallet History</a>
+                
                     </div>
                 </div>
                 <div class="text-center mt-3">
@@ -79,6 +81,8 @@
               </div>
             </div>
         </div>
+
+        <!-- address showing -->
         <div class="container">
           <div class="row justify-content-center mt-4">
             {% for address in user_address %}
@@ -147,6 +151,55 @@
       </div>
       
     </div>
+
+
+<!-- Wallet History Modal -->
+<div class="modal fade" id="walletHistoryModal" tabindex="-1" role="dialog" aria-labelledby="walletHistoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="walletHistoryModalLabel">Wallet Transaction History</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Transaction history will be loaded here -->
+        <div id="wallet-history-content">
+          {% if history %}
+            <table class="table table-bordered">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Date</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for transaction in history %}
+                <tr>
+                  <td><strong>{{ transaction.transaction_type|title }}</strong></td>
+                  <td class="{% if transaction.transaction_type == 'credit' %}text-success{% else %}text-danger{% endif %}">{{ transaction.amount }}</td>
+                  <td>{{ transaction.transaction_date }}</td>
+                  <td>{{ transaction.description }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p>No transactions found.</p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 
 <!-- Add Money Modal -->
 <div class="modal fade" id="addMoneyModal" tabindex="-1" role="dialog" aria-labelledby="addMoneyModalLabel" aria-hidden="true">
@@ -333,6 +386,8 @@
 {% endblock%}
 
 {% block foot %}
+
+<!-- razor pay script -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
   $(document).ready(function() {
@@ -386,6 +441,13 @@
 </script>
 
 
+<script>
+  $(document).ready(function() {
+      $('#walletHistoryModal').on('show.bs.modal', function (e) {
+          // Populate the modal body with the history content already rendered
+      });
+  });
+</script>
 
 
 <script>
