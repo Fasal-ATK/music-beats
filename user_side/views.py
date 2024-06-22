@@ -221,166 +221,28 @@ def Remove_Cart(request, cartitem_id):
             return JsonResponse({'success': False, 'message': 'Cart item does not exist'})
     return JsonResponse({'success': False, 'message': 'Invalid request'})
 
-# Update cart
 @login_required(login_url='ulogin')
 def Update_Cart(request, cartitem_id):
     if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
         try:
             cart_item = CartItem.objects.get(id=cartitem_id)
             new_quantity = int(request.POST.get('qty'))
-            if 1 <= new_quantity <= 10 and new_quantity <= cart_item.product.stock:
-                cart_item.quantity = new_quantity
-                cart_item.save()
-                cart = cart_item.cart
-                cart_items = CartItem.objects.filter(cart=cart)
-                total_price = sum(item.product.price * item.quantity for item in cart_items)
-                item_total = cart_item.product.price * cart_item.quantity
-                # Remove coupon session data if cart is updated
-                request.session.pop('discounted_price', None)
-                request.session.pop('coupon_code', None)
-                return JsonResponse({'success': True, 'total_price': total_price, 'item_total': item_total})
+            if 1 <= new_quantity <= 10:  # Check if quantity is within allowed range
+                if new_quantity <= cart_item.product.stock:  # Check if quantity is within available stock
+                    cart_item.quantity = new_quantity
+                    cart_item.save()
+                    cart = cart_item.cart
+                    cart_items = CartItem.objects.filter(cart=cart)
+                    total_price = sum(item.product.price * item.quantity for item in cart_items)
+                    item_total = cart_item.product.price * cart_item.quantity
+                    return JsonResponse({'success': True, 'total_price': total_price, 'item_total': item_total})
+                else:
+                    return JsonResponse({'success': False, 'message': 'Quantity exceeds available stock'})
             else:
-                return JsonResponse({'success': False, 'message': 'Quantity must be between 1 and 10 and within stock '})
+                return JsonResponse({'success': False, 'message': 'Quantity must be between 1 and 10'})
         except CartItem.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Cart item does not exist'})
     return JsonResponse({'success': False, 'message': 'Invalid request'})
-
-
-
-#-------------------------------------------- Whishlist ---------------------------------------
-
-
-#Wishlist
-@login_required(login_url='ulogin')
-def Wishlist_Page(request):
-    wishlist_items = Wishlist.objects.filter(user=request.user)
-    return render(request, 'wishlist.html', {'wishlist_items': wishlist_items})
-
-#Add wishlist
-@login_required(login_url='ulogin')
-def Add_Wishlist(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-    wishlist_item, created = Wishlist.objects.get_or_create(user=request.user, product=product)
-    if created:
-        messages.success(request, "Product added to wishlist successfully.")
-    else:
-        messages.info(request, "Product is already in your wishlist.")
-    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
-
-# Remove wishlist
-@login_required(login_url='ulogin')
-def Remove_Wishlist(request, wishlistitem_id):
-    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        try:
-            wishlist_item = Wishlist.objects.get(id=wishlistitem_id, user=request.user)
-            wishlist_item.delete()
-            return JsonResponse({'success': True})
-        except Wishlist.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Wishlist item does not exist'})
-    return JsonResponse({'success': False, 'message': 'Invalid request'})
-
-
-
-#-------------------------------------  Profile ------------------------------
-
-
-@login_required(login_url='ulogin')
-def User_Profile(request):
-    user_address = Address.objects.filter(user=request.user)
-    wallet = get_object_or_404(Wallet, user=request.user)  # Fetch the wallet object
-    history = WalletHistory.objects.filter(wallet=wallet)
-    return render(request, 'profile.html', {'user_address': user_address, 'wallet': wallet, 'history': history})
-
-
-# Add address view
-@login_required(login_url='ulogin')
-def Add_Address(request):
-    address_limit = 6 
-    address_count = Address.objects.filter(user=request.user).count()
-    if address_count >= address_limit:
-        messages.error(request, "Address limit reached. You cannot add more addresses.")
-        return redirect(request.META.get('HTTP_REFERER', '/'))
-    if request.method == 'POST':
-        form = AddressForm(request.POST)
-        if form.is_valid():
-            form.instance.user = request.user
-            form.save()
-    return redirect(request.META.get('HTTP_REFERER', '/'))
-
-# Edit address view
-@login_required(login_url='ulogin')
-def Edit_Address(request, address_id):
-    address = get_object_or_404(Address, id=address_id, user=request.user)
-    if request.method == 'POST':
-        form = AddressForm(request.POST, instance=address)
-        if form.is_valid():
-            form.save()
-            return JsonResponse({'success': True}) 
-        return JsonResponse({'errors': form.errors}, status=400)
-    form = AddressForm(instance=address)
-    data = {
-        'id': address.id,
-        'name': address.name,
-        'address_line': address.address_line,
-        'phone': address.phone,
-        'city': address.city,
-        'state': address.state,
-        'postal_code': address.postal_code,
-        'country': address.country,
-    }
-    return JsonResponse(data)
-
-# Delete address view
-@login_required(login_url='ulogin')
-def Delete_Address(request, address_id):
-    if request.method == 'POST':
-        try:
-            address = Address.objects.get(id=address_id)
-            address.delete()
-            return JsonResponse({'message': 'Address deleted successfully'}, status=200)
-        except Address.DoesNotExist:
-            return JsonResponse({'error': 'Address does not exist'}, status=404)
-
-
-# Change password view
-@never_cache
-def Change_Password(request):
-    if request.method == 'POST':
-        current_pass = request.POST.get("current_password")
-        new_pass = request.POST.get("new_password")
-        confirm_pass = request.POST.get("confirm_new_password")
-        if new_pass != confirm_pass:
-            messages.error(request, 'Confirmation password does not match')
-            return redirect('profile')
-        user = request.user
-        if user.check_password(current_pass):
-            user.set_password(new_pass)
-            user.save()
-            logout(request)
-            messages.success(request, 'Password changed successfully')
-        else:
-            messages.error(request, 'Incorrect current password')
-    return redirect('profile')
-
-
-@login_required(login_url='ulogin')
-def Add_Wallet_Money(request):
-    if request.method == 'POST':
-        user_wallet = get_object_or_404(Wallet, user=request.user)
-        money = int(request.POST.get('amount'))  # Ensure money is converted to an integer
-        
-        # Update wallet balance
-        user_wallet.balance += money
-        user_wallet.save()
-
-        # Create wallet history record
-        WalletHistory.objects.create(
-            wallet=user_wallet,
-            amount=money,
-            transaction_type='credit',
-            description='Money added to wallet'
-        )
-    return redirect('profile')
 
 
 
@@ -567,6 +429,141 @@ def Complete_Pending_Order(request):
             return JsonResponse({'status': 'error', 'message': 'Order not found.'})
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
 
+
+#-------------------------------------------- Whishlist ---------------------------------------
+
+
+#Wishlist
+@login_required(login_url='ulogin')
+def Wishlist_Page(request):
+    wishlist_items = Wishlist.objects.filter(user=request.user)
+    return render(request, 'wishlist.html', {'wishlist_items': wishlist_items})
+
+#Add wishlist
+@login_required(login_url='ulogin')
+def Add_Wishlist(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    wishlist_item, created = Wishlist.objects.get_or_create(user=request.user, product=product)
+    if created:
+        messages.success(request, "Product added to wishlist successfully.")
+    else:
+        messages.info(request, "Product is already in your wishlist.")
+    return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+
+# Remove wishlist
+@login_required(login_url='ulogin')
+def Remove_Wishlist(request, wishlistitem_id):
+    if request.method == 'POST' and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        try:
+            wishlist_item = Wishlist.objects.get(id=wishlistitem_id, user=request.user)
+            wishlist_item.delete()
+            return JsonResponse({'success': True})
+        except Wishlist.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Wishlist item does not exist'})
+    return JsonResponse({'success': False, 'message': 'Invalid request'})
+
+
+
+#-------------------------------------  Profile ------------------------------
+
+
+@login_required(login_url='ulogin')
+def User_Profile(request):
+    user_address = Address.objects.filter(user=request.user)
+    wallet = get_object_or_404(Wallet, user=request.user)  # Fetch the wallet object
+    history = WalletHistory.objects.filter(wallet=wallet)
+    return render(request, 'profile.html', {'user_address': user_address, 'wallet': wallet, 'history': history})
+
+
+# Add address view
+@login_required(login_url='ulogin')
+def Add_Address(request):
+    address_limit = 6 
+    address_count = Address.objects.filter(user=request.user).count()
+    if address_count >= address_limit:
+        messages.error(request, "Address limit reached. You cannot add more addresses.")
+        return redirect(request.META.get('HTTP_REFERER', '/'))
+    if request.method == 'POST':
+        form = AddressForm(request.POST)
+        if form.is_valid():
+            form.instance.user = request.user
+            form.save()
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
+# Edit address view
+@login_required(login_url='ulogin')
+def Edit_Address(request, address_id):
+    address = get_object_or_404(Address, id=address_id, user=request.user)
+    if request.method == 'POST':
+        form = AddressForm(request.POST, instance=address)
+        if form.is_valid():
+            form.save()
+            return JsonResponse({'success': True}) 
+        return JsonResponse({'errors': form.errors}, status=400)
+    form = AddressForm(instance=address)
+    data = {
+        'id': address.id,
+        'name': address.name,
+        'address_line': address.address_line,
+        'phone': address.phone,
+        'city': address.city,
+        'state': address.state,
+        'postal_code': address.postal_code,
+        'country': address.country,
+    }
+    return JsonResponse(data)
+
+# Delete address view
+@login_required(login_url='ulogin')
+def Delete_Address(request, address_id):
+    if request.method == 'POST':
+        try:
+            address = Address.objects.get(id=address_id)
+            address.delete()
+            return JsonResponse({'message': 'Address deleted successfully'}, status=200)
+        except Address.DoesNotExist:
+            return JsonResponse({'error': 'Address does not exist'}, status=404)
+
+
+# Change password view
+@never_cache
+def Change_Password(request):
+    if request.method == 'POST':
+        current_pass = request.POST.get("current_password")
+        new_pass = request.POST.get("new_password")
+        confirm_pass = request.POST.get("confirm_new_password")
+        if new_pass != confirm_pass:
+            messages.error(request, 'Confirmation password does not match')
+            return redirect('profile')
+        user = request.user
+        if user.check_password(current_pass):
+            user.set_password(new_pass)
+            user.save()
+            logout(request)
+            messages.success(request, 'Password changed successfully')
+        else:
+            messages.error(request, 'Incorrect current password')
+    return redirect('profile')
+
+
+@login_required(login_url='ulogin')
+def Add_Wallet_Money(request):
+    if request.method == 'POST':
+        user_wallet = get_object_or_404(Wallet, user=request.user)
+        money = int(request.POST.get('amount'))  # Ensure money is converted to an integer
+        
+        # Update wallet balance
+        user_wallet.balance += money
+        user_wallet.save()
+
+        # Create wallet history record
+        WalletHistory.objects.create(
+            wallet=user_wallet,
+            amount=money,
+            transaction_type='credit',
+            description='Money added to wallet'
+        )
+    return redirect('profile')
 #-------------------------------------  Order_Page ------------------------------
 
 
