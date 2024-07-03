@@ -41,9 +41,8 @@ def send_otp_email(email, otp):
 # Home page view
 @never_cache
 def UserHome(request):
-    product = Product.objects.filter(is_listed=True)
     category = Category.objects.filter(is_listed=True)
-    return render(request, 'index.html', {'product': product, 'category': category})
+    return render(request, 'index.html', {'category': category})
 
 # Signup view
 @never_cache
@@ -127,14 +126,18 @@ def Logout(request):
     logout(request)
     return redirect('ulogin')
 
-# Shop view
 def Shop(request):
     product = Product.objects.filter(is_listed=True)
     category = Category.objects.filter(is_listed=True)
 
-    # Get sorting and category filter parameters from the request
+    # Get search query, sorting, and category filter parameters from the request
+    query = request.GET.get('q')
     sort_by = request.GET.get('sort_by')
     selected_category = request.GET.get('category')
+
+    # Apply search filter if a search query is provided
+    if query:
+        product = product.filter(title__icontains=query)
 
     # Apply category filter if a category is selected
     if selected_category:
@@ -150,7 +153,10 @@ def Shop(request):
     elif sort_by == 'price_desc':
         product = product.order_by('-price')
 
-    return render(request, 'shop.html', {'product': product, 'category': category, 'sort_by': sort_by, 'selected_category': selected_category})
+    return render(request, 'shop.html', {'product': product, 'category': category, 'sort_by': sort_by, 'selected_category': selected_category, 'query': query})
+
+def Search_Product(reqeust):
+    pass
 
 
 # Single product view

@@ -7,7 +7,7 @@
 	<!-- Mobile Specific Meta -->
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 	<!-- Favicon-->
-	<link rel="shortcut icon" href="{% static '4user/img/air.png' %}">
+	<link rel="shortcut icon" href="{% static '4user/img/MB_logo.png' %}">
 	<!-- Author Meta -->
 	<meta charset="UTF-8">
 	<!-- Site Title -->
@@ -61,7 +61,7 @@
 					
 					<!-- Brand and toggle get grouped for better mobile display -->
 					
-					<a class="navbar-brand logo_h" href="{% url 'home' %}"><img src="{% static '4user/img/logo.png' %}" alt=""></a>
+					<a class="navbar-brand logo_h" href="{% url 'home' %}"><img src="{% static '4user/img/music beats img.png' %}" alt="" width="250px"></a>
 					<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
 					 aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
 						<span class="icon-bar"></span>
@@ -102,13 +102,14 @@
 		</div>
 		<div class="search_input" id="search_input_box">
 			<div class="container">
-				<form class="d-flex justify-content-between">
-					<input type="text" class="form-control" id="search_input" placeholder="Search Here">
+				<form class="d-flex justify-content-between" action="{% url 'shop' %}" method="GET">
+					<input type="text" class="form-control" id="search_input" name="q" placeholder="Search Here" value="{{ query }}">
 					<button type="submit" class="btn"></button>
 					<span class="lnr lnr-cross" id="close_search" title="Close Search"></span>
 				</form>
 			</div>
 		</div>
+		
 	</header>
 
 	<!-- Start Banner Area -->

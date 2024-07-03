@@ -11,7 +11,8 @@ urlpatterns = [
     path('ulogin/',views.Login,name='ulogin'),
     path('ulogout/',views.Logout,name='ulogout'),
 
-    path('shop/',views.Shop,name='shop'),
+    path('shop/', views.Shop, name='shop'),
+    path('search/', views.Shop, name='shop'),
     path('single/<int:id>/',views.Single_Product,name='single'),
     path('get_product_details/', views.get_product_details, name='get_product_details'),
     
