@@ -122,45 +122,46 @@
                 </div>
             </div>
             <!-- End Filter Bar -->
-            <!-- Start Best Seller -->
-            <section class="lattest-product-area pb-40 category-list">
-                <div class="row">
-                    {% if query %}
-                        <h2>Search Results for "{{ query }}"</h2>
-                    {% endif %}
-                    <!-- single product -->
-                    {% for p in product %}
-                    <div class="col-lg-4 col-md-6">
-                        <div class="single-product">
-                            <a href="#" class="product-preview" data-toggle="modal" data-target="#exampleModal" data-product-id="{{ p.id }}">
-                                <img class="img-fluid" src="{{ p.image.url }}" alt="{{ p.title }}" style="width: 220px; height: 240px; object-fit: cover;">
-                            </a>
-                            <div class="product-details">
-                                <h6>{{ p.title }}</h6>
-                                <div class="price">
-                                    <h6>rs.{{ p.price }}</h6>
-                                </div>
-                                <div class="prd-bottom">
-                                    <a href="{% url 'add-cart' p.id %}" class="social-info">
-                                        <span class="ti-bag"></span>
-                                        <p class="hover-text">add to bag</p>
-                                    </a>
-                                    <a href="{% url 'add-wishlist-item' p.id %}" class="social-info">
-                                        <span class="lnr lnr-heart"></span>
-                                        <p class="hover-text">Wishlist</p>
-                                    </a>
-                                    <a href="{% url 'single' p.id %}" class="social-info">
-                                        <span class="lnr lnr-move"></span>
-                                        <p class="hover-text">view more</p>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+<!-- Start Best Seller -->
+<section class="lattest-product-area pb-40 category-list">
+    <div class="row">
+        {% if query %}
+            <h2>Search Results for "{{ query }}"</h2>
+        {% endif %}
+        <!-- single product -->
+        {% for p in product %}
+        <div class="col-lg-4 col-md-6">
+            <div class="single-product">
+                <a href="{% url 'single' p.id %}" class="product-preview">
+                    <img class="img-fluid" src="{{ p.image.url }}" alt="{{ p.title }}" style="width: 220px; height: 240px; object-fit: cover;">
+                </a>
+                <div class="product-details">
+                    <h6>{{ p.title }}</h6>
+                    <div class="price">
+                        <h6>rs.{{ p.price }}</h6>
                     </div>
-                    {% endfor %}
+                    <div class="prd-bottom">
+                        <a href="{% url 'add-cart' p.id %}" class="social-info">
+                            <span class="ti-bag"></span>
+                            <p class="hover-text">add to bag</p>
+                        </a>
+                        <a href="{% url 'add-wishlist-item' p.id %}" class="social-info">
+                            <span class="lnr lnr-heart"></span>
+                            <p class="hover-text">Wishlist</p>
+                        </a>
+                        <a href="{% url 'single' p.id %}" class="social-info">
+                            <span class="lnr lnr-move"></span>
+                            <p class="hover-text">view more</p>
+                        </a>
+                    </div>
                 </div>
-            </section>
-            <!-- End Best Seller -->
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+<!-- End Best Seller -->
+
         </div>
     </div>
 </div>

@@ -155,9 +155,6 @@ def Shop(request):
 
     return render(request, 'shop.html', {'product': product, 'category': category, 'sort_by': sort_by, 'selected_category': selected_category, 'query': query})
 
-def Search_Product(reqeust):
-    pass
-
 
 # Single product view
 def Single_Product(request, id):
