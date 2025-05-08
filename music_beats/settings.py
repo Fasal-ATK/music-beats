@@ -58,9 +58,9 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'music_beats.wsgi.application'
+WSGI_APPLICATION = 'music_beats.wsgi.application' 
 
-# Database
+# Database dfds
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
