@@ -41,6 +41,13 @@ def send_otp_email(email, otp):
 # Home page view
 @never_cache
 def UserHome(request):
+    if request.user.is_authenticated:
+        if request.user.is_staff or getattr(request.user, 'is_admin', False):
+            return redirect('/admin/')
+        # Non-staff, non-admin users render the home page
+        category = Category.objects.filter(is_listed=True)
+        return render(request, 'index.html', {'category': category})
+    # Unauthenticated users render the home page
     category = Category.objects.filter(is_listed=True)
     return render(request, 'index.html', {'category': category})
 
